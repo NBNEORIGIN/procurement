@@ -18,13 +18,13 @@ CATEGORY_COLUMN_CANDIDATES = ['Material Type', 'Category', 'Type']
 OVERHEAD_CATEGORIES = [
     'Shipping', 'Salaries', 'Rent', 'General', 'Admin', 'Software',
     'Utilities', 'Bank Charges', 'Consultancy', 'Travel', 'Marketing',
-    'Taxes', 'Insurance', 'Maintenance', 'Staff Costs', 'Office Supplies', # Added Office Supplies
+    'Taxes', 'Insurance', 'Maintenance', 'Staff Costs', 'Office Supplies',
     'Logistics', 'IT Support', 'Legal Fees', 'Accounting Fees', 'Subscriptions', 'Training'
 ]
 # Additional overhead filtering based on keywords in item description
 OVERHEAD_ITEM_KEYWORDS = [
     'shipment', 'delivery', 'courier', 'consulting', 'fee', 'tax', 'vat',
-    'service charge', 'bank charges', 'rent', 'salary', 'salaries', 'payroll',
+    'service charge', 'bank charges', 'rent', 'salary', 'salaries', 'payroll', # Added rent, salary, salaries
     'interest', 'insurance', 'travel expenses', 'subscription', 'software license',
     'utilities', 'phone bill', 'internet bill', 'office cleaning', 'repairs'
 ]
@@ -112,7 +112,7 @@ def analyze_top_products(df, item_col, qty_col):
         print("Saved plot to top_products.png")
     except Exception as e:
         print(f"Error saving top_products.png: {e}")
-    plt.show()
+    # plt.show() # Generally disable plt.show() for automated scripts
 
 
 def analyze_supplier_usage(df, item_col, supplier_col, top_n_items_for_supplier_analysis=TOP_N_SUPPLIER_ITEMS):
@@ -120,10 +120,9 @@ def analyze_supplier_usage(df, item_col, supplier_col, top_n_items_for_supplier_
     if supplier_col is None or supplier_col not in df:
         print("Error: Supplier column not found for supplier analysis.")
         return
-    if item_col is None or item_col not in df : # item_col needed for top item supplier analysis
-        print("Error: Item column not found for supplier analysis (for top items).")
-        # We can still do overall supplier frequency
-        # return # Uncomment if you want to halt if item_col is missing
+    # item_col is needed for top item supplier analysis, but overall supplier frequency can still run
+    # if item_col is None or item_col not in df :
+    #     print("Warning: Item column not found for detailed supplier analysis (for top items).")
 
     df_analysis = df.copy().dropna(subset=[supplier_col])
     if df_analysis.empty:
@@ -147,13 +146,14 @@ def analyze_supplier_usage(df, item_col, supplier_col, top_n_items_for_supplier_
         print("Saved plot to supplier_frequency.png")
     except Exception as e:
         print(f"Error saving supplier_frequency.png: {e}")
-    plt.show()
+    # plt.show() # Generally disable plt.show() for automated scripts
 
     # Primary suppliers for top N items (if item_col is available)
     if item_col and item_col in df_analysis:
-        # First, find the actual top N items by order frequency or quantity. Let's use frequency for simplicity here.
-        # This requires qty_col to be identified and numeric if using quantity.
-        # For now, let's use order frequency of items.
+        # First, find the actual top N items by order frequency or quantity.
+        # Let's use order frequency of items, as quantity might be less reliable or not applicable for all items.
+        # Ensure qty_col is present and numeric if using quantity-based top items
+        # For now, using frequency:
         top_item_names = df_analysis[item_col].value_counts().nlargest(top_n_items_for_supplier_analysis).index.tolist()
 
         if not top_item_names:
@@ -170,7 +170,7 @@ def analyze_supplier_usage(df, item_col, supplier_col, top_n_items_for_supplier_
             else:
                 print(f"\nItem: {item_name} - No supplier data found after filtering.")
     else:
-        print("\nSkipping primary supplier analysis for top items as item column was not identified.")
+        print("\nSkipping primary supplier analysis for top items as item column was not identified or available.")
 
 
 def analyze_order_cadence(df, item_col, date_col):
@@ -180,10 +180,9 @@ def analyze_order_cadence(df, item_col, date_col):
         return
 
     df_analysis = df.copy()
-    df_analysis = df_analysis.dropna(subset=[item_col, date_col])
     # Ensure date_col is datetime
-    df_analysis[date_col] = pd.to_datetime(df_analysis[date_col], errors='coerce', dayfirst=True) # Assuming dayfirst, adjust if not
-    df_analysis = df_analysis.dropna(subset=[date_col])
+    df_analysis[date_col] = pd.to_datetime(df_analysis[date_col], errors='coerce')
+    df_analysis = df_analysis.dropna(subset=[item_col, date_col])
 
 
     if df_analysis.empty:
@@ -201,7 +200,8 @@ def analyze_order_cadence(df, item_col, date_col):
                 avg_cadence = time_diffs.mean()
                 cadence_data.append({'Raw Material': item, 'Average Days Between Orders': avg_cadence})
             else:
-                cadence_data.append({'Raw Material': item, 'Average Days Between Orders': 'N/A (only one order with valid date diff)'})
+                # This case handles if all diffs result in NaT (e.g. same day orders, though dt.days would be 0)
+                cadence_data.append({'Raw Material': item, 'Average Days Between Orders': 'N/A (could not calculate valid time differences)'})
         else:
             cadence_data.append({'Raw Material': item, 'Average Days Between Orders': 'Single Order or Insufficient Data'})
 
@@ -244,12 +244,19 @@ def main():
         print("requirements.txt not found. Attempting to run setup.py...")
         try:
             import subprocess
-            subprocess.run(['python', 'setup.py'], check=True)
-            print("setup.py executed. Please ensure dependencies are installed before re-running eda.py if needed.")
-        except Exception as e:
-            print(f"Could not run setup.py: {e}. Please run it manually.")
-            # Depending on policy, you might want to exit here
-            # return
+            # Ensure setup.py is executable or called via python interpreter
+            subprocess.run(['python', 'setup.py'], check=True, capture_output=True, text=True)
+            print("setup.py executed. Please ensure dependencies are installed (e.g., pip install -r requirements.txt) before re-running eda.py if needed.")
+        except subprocess.CalledProcessError as e:
+            print(f"Could not run setup.py successfully: {e}")
+            print(f"stdout: {e.stdout}")
+            print(f"stderr: {e.stderr}")
+            print("Please run setup.py manually and install requirements.")
+            return # Exit if setup cannot be run, as dependencies might be missing
+        except FileNotFoundError:
+            print("setup.py not found in the current directory. Please ensure it exists.")
+            return
+
 
     # Load data
     try:
@@ -274,22 +281,26 @@ def main():
     print("\n--- Data Cleaning and Preparation ---")
 
     # Convert date column
+    date_col_to_use = None
     if DATE_COLUMN in df.columns:
         print(f"Converting '{DATE_COLUMN}' to datetime...")
-        df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN], errors='coerce', dayfirst=True) # Assuming dayfirst, adjust if not
-        # df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN], errors='coerce', format='%d/%m/%Y') # More specific format
-    else:
-        print(f"Warning: Date column '{DATE_COLUMN}' not found.")
-        # Attempt to find a date column if DATE_COLUMN is not present
-        # This is a basic example; more robust detection might be needed
-        for col in df.columns:
+        df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN], errors='coerce', dayfirst=True)
+        if not df[DATE_COLUMN].isnull().all():
+             date_col_to_use = DATE_COLUMN
+    
+    if not date_col_to_use: # If primary DATE_COLUMN failed or wasn't found
+        print(f"Warning: Primary date column '{DATE_COLUMN}' not found or failed conversion.")
+        for col in df.columns: # Attempt to find an alternative
             if 'date' in col.lower():
                 print(f"Attempting to use column '{col}' as date column.")
-                df[DATE_COLUMN] = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
-                break
-        if DATE_COLUMN not in df.columns or df[DATE_COLUMN].isnull().all(): # Check if conversion failed or column not found
-            print(f"Error: Could not identify or convert a usable date column. Exiting.")
-            return
+                df[col] = pd.to_datetime(df[col], errors='coerce', dayfirst=True)
+                if not df[col].isnull().all():
+                    date_col_to_use = col
+                    print(f"Using '{col}' as the date column.")
+                    break # Found a usable date column
+        if not date_col_to_use:
+            print(f"Error: Could not identify or convert a usable date column. Date-related analyses will be affected.")
+            # Allow script to continue for non-date-dependent analyses if possible
 
 
     # Identify actual column names to use
@@ -298,28 +309,27 @@ def main():
     quantity_column_name_actual = find_column(df, QUANTITY_COLUMN_CANDIDATES)
     category_column_name = find_column(df, CATEGORY_COLUMN_CANDIDATES)
 
-    # Attempt to parse quantity from description if a dedicated quantity column is problematic or missing
-    # Create a working quantity column
-    df['parsed_quantity'] = np.nan # Initialize
-
-    if item_column_name: # We need an item description to parse from
-        print(f"Attempting to parse quantity from '{item_column_name}' as 'parsed_quantity'.")
+    # Attempt to parse quantity from description
+    df['parsed_quantity'] = np.nan
+    if item_column_name:
+        print(f"Attempting to parse quantity from '{item_column_name}' into 'parsed_quantity'.")
         df['parsed_quantity'] = df[item_column_name].apply(parse_quantity)
 
-    # If a dedicated quantity column exists and is mostly good, use it. Otherwise, rely on parsed.
-    # This logic can be refined. For now, if 'Quantity' exists, we assume it's the primary one,
-    # but we'll fill its NaNs with parsed_quantity if possible.
+    qty_col_to_use = 'parsed_quantity' # Default to parsed
     if quantity_column_name_actual:
-        print(f"Using '{quantity_column_name_actual}' as primary quantity column.")
+        print(f"Dedicated quantity column '{quantity_column_name_actual}' found. Will use it and fill NaNs with parsed quantity.")
         df[quantity_column_name_actual] = pd.to_numeric(df[quantity_column_name_actual], errors='coerce')
+        # Prioritize actual column, fill NaN with parsed
         df[quantity_column_name_actual] = df[quantity_column_name_actual].fillna(df['parsed_quantity'])
         qty_col_to_use = quantity_column_name_actual
     else:
-        print("Using 'parsed_quantity' as the primary quantity column as no dedicated one was found or suitable.")
-        qty_col_to_use = 'parsed_quantity'
+        print(f"No dedicated quantity column found or suitable. Using 'parsed_quantity'.")
 
     print(f"Final quantity column to be used for analysis: '{qty_col_to_use}'")
-    print(df[[item_column_name, qty_col_to_use]].head())
+    if item_column_name and qty_col_to_use in df.columns :
+      print(df[[item_column_name, qty_col_to_use]].head())
+    else:
+      print("Cannot display head of item/quantity columns as one was not identified.")
 
 
     # --- Filtering Overheads ---
@@ -330,6 +340,7 @@ def main():
     # Filter by category
     if category_column_name and category_column_name in df_filtered.columns:
         print(f"Filtering based on '{category_column_name}'. Excluding categories: {', '.join(OVERHEAD_CATEGORIES)}")
+        # Ensure case-insensitivity for comparison
         df_filtered = df_filtered[~df_filtered[category_column_name].astype(str).str.lower().isin([cat.lower() for cat in OVERHEAD_CATEGORIES])]
         print(f"Rows after category filtering: {len(df_filtered)}")
     else:
@@ -339,6 +350,7 @@ def main():
     if item_column_name and item_column_name in df_filtered.columns:
         print(f"Filtering based on keywords in '{item_column_name}'. Excluding keywords: {', '.join(OVERHEAD_ITEM_KEYWORDS)}")
         keyword_pattern = '|'.join([re.escape(keyword.lower()) for keyword in OVERHEAD_ITEM_KEYWORDS])
+        # Ensure item_column is string and handle NaNs before applying string operations
         df_filtered = df_filtered[~df_filtered[item_column_name].astype(str).str.lower().str.contains(keyword_pattern, na=False)]
         print(f"Rows after item keyword filtering: {len(df_filtered)}")
     else:
@@ -353,25 +365,25 @@ def main():
         return
 
     # --- Run Analyses ---
-    if item_column_name and qty_col_to_use:
+    if item_column_name and qty_col_to_use in df_filtered.columns:
         analyze_top_products(df_filtered, item_column_name, qty_col_to_use)
     else:
-        print("Skipping Top Products Analysis: Item or Quantity column not identified.")
+        print("Skipping Top Products Analysis: Item or Quantity column not identified/valid.")
 
     if supplier_column_name:
-        analyze_supplier_usage(df_filtered, item_column_name, supplier_column_name) # item_column_name can be None here
+        analyze_supplier_usage(df_filtered, item_column_name, supplier_column_name)
     else:
         print("Skipping Supplier Analysis: Supplier column not identified.")
 
-    if item_column_name and DATE_COLUMN in df_filtered.columns:
-        analyze_order_cadence(df_filtered, item_column_name, DATE_COLUMN)
+    if item_column_name and date_col_to_use and date_col_to_use in df_filtered.columns :
+        analyze_order_cadence(df_filtered, item_column_name, date_col_to_use)
     else:
         print("Skipping Order Cadence Analysis: Item or Date column not identified/valid.")
 
-    if item_column_name and qty_col_to_use:
+    if item_column_name and qty_col_to_use in df_filtered.columns:
         analyze_order_quantity(df_filtered, item_column_name, qty_col_to_use)
     else:
-        print("Skipping Order Quantity Analysis: Item or Quantity column not identified.")
+        print("Skipping Order Quantity Analysis: Item or Quantity column not identified/valid.")
 
     print("\nEDA Script finished.")
 
