@@ -1,8 +1,18 @@
-import json # Not strictly needed for this version, but good for future if loading supplier details here
+import smtplib
+import os # For environment variables
+from email.mime.text import MIMEText
 
-# --- Configuration ---
-YOUR_COMPANY_NAME = "NBNE"
-YOUR_COMPANY_CONTACT_INFO = "Toby Fletcher"\
+# --- Email Configuration (MUST BE COMPLETED AND HANDLED SECURELY) ---
+SMTP_SERVER = os.environ.get('PROCUREMENT_SMTP_SERVER', 'your_smtp_server.com') # Example: 'smtp.gmail.com'
+SMTP_PORT = int(os.environ.get('PROCUREMENT_SMTP_PORT', 587)) # Example: 587 for TLS, 465 for SSL
+SMTP_SENDER_EMAIL = os.environ.get('PROCUREMENT_SMTP_SENDER_EMAIL', 'your_email@example.com')
+# IMPORTANT: Use environment variables or a secure method for the password
+SMTP_SENDER_PASSWORD = os.environ.get('PROCUREMENT_SMTP_PASSWORD', 'YOUR_APP_PASSWORD_OR_REGULAR_PASSWORD')
+SMTP_USE_TLS = os.environ.get('PROCUREMENT_SMTP_USE_TLS', 'True').lower() == 'true' # Use TLS by default
+
+# --- Company Configuration (from previous version) ---
+YOUR_COMPANY_NAME = "Your Company Name" # Customize this
+YOUR_COMPANY_CONTACT_INFO = """\
 Regards,
 
 The Procurement Team
@@ -10,31 +20,27 @@ Your Company Name
 [Your Phone Number]
 [Your Email Address]
 [Your Website (Optional)]
-"""
+""" # Customize this
 
-def generate_po_email(supplier_name, supplier_email, items_to_order):
+def generate_po_email_content(supplier_name, items_to_order):
     """
-    Generates a formatted draft email string for a purchase order.
+    Generates the subject and body for a purchase order email.
 
     Args:
         supplier_name (str): The name of the supplier.
-        supplier_email (str): The email address of the supplier.
-        items_to_order (list): A list of dictionaries, where each dictionary
-                               should have 'name' (str) and 'quantity' (any) keys.
-                               Example: [{'name': 'Raw Material A', 'quantity': 100},
-                                         {'name': 'Component B', 'quantity': 50}]
+        items_to_order (list): A list of dictionaries, each with 'name' and 'quantity'.
 
     Returns:
-        str: A formatted email string.
+        tuple: (subject, body_text) or (None, None) if error.
     """
-
-    if not supplier_name or not supplier_email:
-        return "Error: Supplier name or email missing."
+    if not supplier_name:
+        print("Error generating email content: Supplier name missing.")
+        return None, None
     if not items_to_order:
-        return f"Error: No items provided for order to {supplier_name}."
+        print(f"Error generating email content: No items provided for order to {supplier_name}.")
+        return None, None
 
     subject = f"Purchase Order - {YOUR_COMPANY_NAME} - Order for {supplier_name}"
-
     greeting = f"Dear {supplier_name} team,"
 
     item_list_string = ""
@@ -42,9 +48,6 @@ def generate_po_email(supplier_name, supplier_email, items_to_order):
         item_name = item.get('name', 'N/A')
         item_quantity = item.get('quantity', 'N/A')
         item_list_string += f"- {item_name}: {item_quantity}\n"
-
-    if not item_list_string: # Should not happen if items_to_order is validated, but as a safeguard
-        item_list_string = "No specific items detailed in this order request. Please clarify."
 
     body = f"""\
 {greeting}
@@ -59,44 +62,95 @@ If you have any questions, please don't hesitate to contact us.
 
 {YOUR_COMPANY_CONTACT_INFO}
 """
+    return subject, body
 
-    # Constructing the full email string (often useful for logging or before sending)
-    # For now, we'll just return the body, but you could return subject and body separately
-    # or a fully formed email string if using smtplib later.
+def send_po_email(recipient_email, subject, body_text):
+    """
+    Sends an email using SMTP.
+
+    Args:
+        recipient_email (str): The email address of the recipient.
+        subject (str): The subject of the email.
+        body_text (str): The plain text body of the email.
+
+    Returns:
+        bool: True if email was sent successfully, False otherwise.
+    """
+    if not all([recipient_email, subject, body_text]):
+        print("Error sending email: Missing recipient, subject, or body.")
+        return False
     
-    # Full email draft (can be printed or logged)
-    full_email_draft = f"To: {supplier_email}\n"
-    full_email_draft += f"Subject: {subject}\n"
-    full_email_draft += "---\n" # Separator
-    full_email_draft += body
+    if not SMTP_SENDER_EMAIL or SMTP_SENDER_EMAIL == 'your_email@example.com' or \
+       not SMTP_SENDER_PASSWORD or SMTP_SENDER_PASSWORD == 'YOUR_APP_PASSWORD_OR_REGULAR_PASSWORD' or \
+       not SMTP_SERVER or SMTP_SERVER == 'your_smtp_server.com':
+        print("Error: SMTP server, sender email, or password not configured.")
+        print("Please set PROCUREMENT_SMTP_SERVER, PROCUREMENT_SMTP_PORT, PROCUREMENT_SMTP_SENDER_EMAIL, and PROCUREMENT_SMTP_PASSWORD environment variables.")
+        return False
 
-    return full_email_draft # Or just body, depending on how main.py will use it.
-                           # Returning the full draft is good for the "print to console" step.
+    msg = MIMEText(body_text)
+    msg['Subject'] = subject
+    msg['From'] = SMTP_SENDER_EMAIL
+    msg['To'] = recipient_email
+
+    try:
+        print(f"Attempting to send email to {recipient_email} via {SMTP_SERVER}:{SMTP_PORT}...")
+        if SMTP_USE_TLS:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls() # Secure the connection
+        else: # Assumes SSL if not TLS, or direct if port is for non-encrypted (not recommended)
+             # For SSL, smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) is often used.
+             # This basic example uses TLS by default; adjust if your server uses SSL on a different port.
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) if SMTP_PORT == 465 else smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+
+
+        server.login(SMTP_SENDER_EMAIL, SMTP_SENDER_PASSWORD)
+        server.sendmail(SMTP_SENDER_EMAIL, recipient_email, msg.as_string())
+        server.quit()
+        print(f"Email successfully sent to {recipient_email}")
+        return True
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"SMTP Authentication Error: Could not login. Check email/password. Details: {e}")
+    except smtplib.SMTPServerDisconnected as e:
+        print(f"SMTP Server Disconnected: Check server address and port. Details: {e}")
+    except smtplib.SMTPConnectError as e:
+        print(f"SMTP Connect Error: Could not connect to server. Details: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred while sending email: {e}")
+    return False
 
 # --- Example Usage (for testing this script directly) ---
 if __name__ == "__main__":
-    print("Testing generate_po_email function...")
+    print("Testing email functions...")
 
-    # Example supplier data (normally this would come from suppliers.json in main.py)
     example_supplier_name = "Test Supplier Inc."
-    example_supplier_email = "test@supplier.com"
-
-    # Example items to order
+    example_recipient_email = "test_recipient@example.com" # Change to a real email you can check for testing
     example_items = [
         {'name': 'Blue Widgets', 'quantity': 100},
-        {'name': 'Red Gadgets', 'quantity': 50, 'unit_price': 10.99}, # Extra info ignored by current func
-        {'name': 'Green Gizmos', 'quantity': 75}
+        {'name': 'Red Gadgets', 'quantity': 50}
     ]
-    
-    draft_email_output = generate_po_email(example_supplier_name, example_supplier_email, example_items)
-    
-    print("\n--- Example Draft Email Output ---")
-    print(draft_email_output)
 
-    print("\n--- Testing with missing items ---")
-    draft_email_no_items = generate_po_email(example_supplier_name, example_supplier_email, [])
-    print(draft_email_no_items)
-    
-    print("\n--- Testing with missing supplier details ---")
-    draft_email_no_supplier = generate_po_email("", "", example_items)
-    print(draft_email_no_supplier)
+    # 1. Generate email content
+    subject, body = generate_po_email_content(example_supplier_name, example_items)
+
+    if subject and body:
+        print(f"\n--- Email Content Generated ---")
+        print(f"Recipient: {example_recipient_email}")
+        print(f"Subject: {subject}")
+        print(f"Body:\n{body}")
+        
+        # 2. Send the email
+        # IMPORTANT: For this test to work, you MUST configure SMTP settings above
+        # or via environment variables.
+        # Use a test recipient email you have access to.
+        
+        # print("\n--- Attempting to Send Email (ensure SMTP settings are correct) ---")
+        # success = send_po_email(example_recipient_email, subject, body)
+        # if success:
+        #     print("Test email sent successfully (check the recipient's inbox).")
+        # else:
+        #     print("Test email failed to send. Check SMTP configurations and error messages above.")
+        print("\n--- To test sending, uncomment the send_po_email call above ---")
+        print("--- AND ensure your SMTP settings and credentials are correctly set via environment variables or temporarily in the script (NOT recommended for production). ---")
+
+    else:
+        print("Failed to generate email content for testing.")
