@@ -190,4 +190,7 @@ def save_dataframe(df, file_path, headers_order): # Standalone save for convenie
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv); win = OrderCheckInGUI(); win.show(); sy
+    app = QApplication(sys.argv)
+    win = OrderCheckInGUI() # Assuming your main class for this GUI is OrderCheckInGUI
+    win.show()
+    sys.exit(app.exec())
