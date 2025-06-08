@@ -61,6 +61,8 @@ def append_to_csv(df_to_append, file_path, expected_headers):
 def generate_movement_id(): return f"SM-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
 
 class OrderCheckInGUI(QMainWindow):
+    print("DEBUG: OrderCheckInGUI class is being defined NOW") # <-- ADD THIS
+    print("DEBUG: OrderCheckInGUI class is being defined NOW") # <-- ADD THIS
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Order Check-In System"); self.setGeometry(150, 150, 1000, 600)
