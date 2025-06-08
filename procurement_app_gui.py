@@ -140,22 +140,50 @@ class DataManagementWidget(QWidget):
         self.materials_table_view.resizeColumnsToContents(); self.materials_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
 
-    def on_material_selected(self): # Identical
+    def on_material_selected(self): 
         rows = self.materials_table_view.selectionModel().selectedRows()
-        if not rows: self.clear_material_form(); return
-        idx = MATERIALS_HEADERS.index('MaterialID'); mat_id_item = self.materials_table_view.item(rows[0].row(), idx)
-        if not mat_id_item or not mat_id_item.text(): self.clear_material_form(); return; material_id = mat_id_item.text()
+        if not rows: 
+            self.clear_material_form()
+            return
+        
+        selected_row_index_in_view = rows[0].row()
+        material_id_col_idx = MATERIALS_HEADERS.index('MaterialID') 
+        mat_id_item = self.materials_table_view.item(selected_row_index_in_view, material_id_col_idx)
+
+        if not mat_id_item or not mat_id_item.text(): 
+            self.clear_material_form() 
+            return 
+        
+        material_id = mat_id_item.text() # Variable `material_id` is defined
+        
+        # Use the corrected variable `material_id` here:
         data_rows = self.materials_df[self.materials_df['MaterialID'] == material_id] 
-        if data_rows.empty: self.clear_material_form(); return; data = data_rows.iloc[0]
+        
+        if data_rows.empty: 
+            self.clear_material_form()
+            # Optional: QMessageBox.warning(self, "Data Sync Error", f"MaterialID '{material_id}' not found in DataFrame.")
+            return  # Explicitly return if no data found
+        
+        data = data_rows.iloc[0] # This line should now be safe
+        
         self.mat_id_edit.setText(str(data.get('MaterialID',''))); self.mat_id_edit.setReadOnly(True)
         self.mat_name_edit.setText(str(data.get('MaterialName','')))
         self.mat_cat_edit.setText(str(data.get('Category',''))); self.mat_uom_edit.setText(str(data.get('UnitOfMeasure','')))
-        self.mat_stock_spin.setValue(get_int_val(data.get('CurrentStock'))); self.mat_rop_spin.setValue(get_int_val(data.get('ReorderPoint')))
-        self.mat_soq_spin.setValue(get_int_val(data.get('StandardOrderQuantity'))); self.mat_price_spin.setValue(get_float_val(data.get('CurrentPrice'))) 
-        pref_sup_id_val = str(data.get('PreferredSupplierID','')); idx = self.mat_pref_sup_combo.findData(pref_sup_id_val) 
-        self.mat_pref_sup_combo.setCurrentIndex(idx if idx != -1 else 0) 
-        self.mat_url_edit.setText(str(data.get('ProductPageURL',''))); self.mat_lead_spin.setValue(get_int_val(data.get('LeadTimeDays')))
-        self.mat_safe_stock_spin.setValue(get_int_val(data.get('SafetyStockQuantity'))); self.mat_notes_edit.setText(str(data.get('Notes','')))
+        
+        self.mat_stock_spin.setValue(get_int_val(data.get('CurrentStock')))
+        self.mat_rop_spin.setValue(get_int_val(data.get('ReorderPoint')))
+        self.mat_soq_spin.setValue(get_int_val(data.get('StandardOrderQuantity')))
+        self.mat_price_spin.setValue(get_float_val(data.get('CurrentPrice'))) 
+        
+        pref_sup_id_val = str(data.get('PreferredSupplierID',''))
+        found_index = self.mat_pref_sup_combo.findData(pref_sup_id_val) 
+        if found_index != -1: self.mat_pref_sup_combo.setCurrentIndex(found_index)
+        else: self.mat_pref_sup_combo.setCurrentIndex(0) 
+            
+        self.mat_url_edit.setText(str(data.get('ProductPageURL','')))
+        self.mat_lead_spin.setValue(get_int_val(data.get('LeadTimeDays')))
+        self.mat_safe_stock_spin.setValue(get_int_val(data.get('SafetyStockQuantity')))
+        self.mat_notes_edit.setText(str(data.get('Notes','')))
 
     def clear_material_form(self): # Identical
         self.mat_id_edit.clear(); self.mat_id_edit.setReadOnly(False); self.mat_id_edit.setPlaceholderText("Unique ID*")
