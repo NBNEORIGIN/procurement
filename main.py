@@ -1,6 +1,7 @@
 import pandas as pd
 import json
-from action import generate_po_email # Assuming action.py is in the same directory
+# Updated import from action.py
+from action import generate_po_email_content, send_po_email 
 
 # --- File Names ---
 RULES_FILE = "procurement_rules.json"
@@ -38,7 +39,7 @@ def load_csv_file(file_path):
         return None
 
 def main():
-    print("--- Starting Procurement Agent Dry Run ---")
+    print("--- Starting Procurement Agent ---")
 
     # Load all necessary data files
     procurement_rules = load_json_file(RULES_FILE)
@@ -49,10 +50,8 @@ def main():
         print("Error: One or more essential data files could not be loaded. Exiting.")
         return
 
-    # Convert procurement_rules list to a dictionary keyed by RawMaterial for easier lookup
     rules_map = {rule['RawMaterial']: rule for rule in procurement_rules}
-
-    items_to_order_by_supplier = {} # Key: supplier_name, Value: list of items for that supplier
+    items_to_order_by_supplier = {}
 
     print("\n--- Checking Inventory Levels ---")
     for index, row in inventory_df.iterrows():
@@ -64,7 +63,7 @@ def main():
             continue
 
         rule = rules_map[material]
-        reorder_point = rule.get('ReorderPoint', float('inf')) # Default to infinity if not found, to avoid ordering
+        reorder_point = rule.get('ReorderPoint', float('inf'))
 
         print(f"Checking: {material} (Stock: {current_stock}, ROP: {reorder_point})")
 
@@ -92,26 +91,40 @@ def main():
         else:
             print(f"  OK: Stock for {material} is sufficient.")
 
-
     if not items_to_order_by_supplier:
         print("\n--- No items require reordering at this time. ---")
     else:
-        print("\n--- Generating Draft Purchase Order Emails ---")
+        print("\n--- Processing Orders and Sending Emails ---")
         for supplier_name, items in items_to_order_by_supplier.items():
-            print(f"\n--- DRAFT EMAIL FOR SUPPLIER: {supplier_name.upper()} ---")
+            print(f"\n--- PROCESSING ORDER FOR SUPPLIER: {supplier_name.upper()} ---")
             
             supplier_info = supplier_contacts.get(supplier_name)
             if not supplier_info or not supplier_info.get('email'):
-                print(f"Warning: Email address not found for supplier '{supplier_name}' in {SUPPLIERS_FILE}. Cannot generate email.")
+                print(f"  Warning: Email address not found for supplier '{supplier_name}' in {SUPPLIERS_FILE}. Cannot send email.")
                 continue
             
             supplier_email = supplier_info['email']
-            
-            draft_email = generate_po_email(supplier_name, supplier_email, items)
-            print(draft_email)
-            print("--- END OF DRAFT EMAIL ---")
+            if not supplier_email: # Handles case where email key exists but value is null/empty
+                 print(f"  Warning: Email address is blank for supplier '{supplier_name}' in {SUPPLIERS_FILE}. Cannot send email.")
+                 continue
 
-    print("\n--- Procurement Agent Dry Run Finished ---")
+            print(f"  Preparing PO for {supplier_name} ({supplier_email}) for {len(items)} item(s).")
+            subject, body = generate_po_email_content(supplier_name, items)
+            
+            if subject and body:
+                print(f"  Attempting to send email to {supplier_email}...")
+                # Ensure your action.py's SMTP settings are configured via environment variables for security
+                success = send_po_email(supplier_email, subject, body)
+                if success:
+                    print(f"  Successfully sent PO email to {supplier_name} at {supplier_email}.")
+                else:
+                    print(f"  Failed to send PO email to {supplier_name}. Check action.py logs/SMTP settings in environment variables.")
+            else:
+                # This case should ideally not be reached if items list is valid
+                print(f"  Error: Could not generate email content for {supplier_name}. Items: {items}")
+            print(f"--- FINISHED PROCESSING SUPPLIER: {supplier_name.upper()} ---")
+
+    print("\n--- Procurement Agent Finished ---")
 
 if __name__ == "__main__":
     main()
