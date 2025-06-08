@@ -119,4 +119,4 @@ class CentralHubGUI(QMainWindow):
         self.current_selected_supplier_key = None; self.supplier_list_widget.clearSelection()
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv); win = CentralHubGUI(); win.show(); sys.e
+    app = QApplication(sys.argv); win = CentralHubGUI(); win.show(); sys.exit(app.exec())
