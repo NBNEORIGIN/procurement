@@ -12,15 +12,14 @@ SMTP_USE_TLS = os.environ.get('PROCUREMENT_SMTP_USE_TLS', 'True').lower() == 'tr
 
 # --- Company Configuration (from previous version) ---
 YOUR_COMPANY_NAME = "NBNE" # Customize this
-YOUR_COMPANY_CONTACT_INFO = "Toby"\
-Regards,
+YOUR_COMPANY_CONTACT_INFO = """Regards,
 
 The Procurement Team
 Your Company Name
 [Your Phone Number]
 [Your Email Address]
-[Your Website (Optional)]
-""" # Customize this
+[Your Website (Optional)]"""
+
 
 def generate_po_email_content(supplier_name, items_to_order):
     """
