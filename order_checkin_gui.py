@@ -26,44 +26,40 @@ def get_int_val(val_str, default=0):
     try: return int(float(str(val_str))) if pd.notna(val_str) and str(val_str).strip() != '' else default
     except ValueError: return default
 
-def load_or_create_dataframe(file_path, expected_headers, default_dtype=str):
+# CORRECTED DEFINITION for load_or_create_dataframe
+def load_or_create_dataframe(file_path, expected_headers, default_dtype=str, create_if_missing=False): # Added create_if_missing
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         try:
             df = pd.read_csv(file_path, dtype=default_dtype).fillna('')
             missing_cols = False; current_headers = df.columns.tolist()
             for header in expected_headers:
                 if header not in current_headers: df[header] = ''; missing_cols = True
-            if missing_cols and os.path.getsize(file_path) > 0: # Avoid message if file was just created empty
-                 QMessageBox.information(None,"File Schema Notice", f"File '{file_path}' was missing columns; they've been added.")
-            return df[expected_headers].fillna('')
+            if missing_cols : # Simpler message, avoid complex condition on getsize here
+                 QMessageBox.information(None,"File Schema Notice", f"File '{file_path}' had schema inconsistencies; attempted to align.")
+            return df[expected_headers].fillna('') # Ensure correct order and fill NaNs
         except Exception as e:
             QMessageBox.critical(None, "Load Error", f"Error loading {file_path}: {e}")
             return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
-    else: # File does not exist or is empty
-        create_new = True
-        if os.path.exists(file_path) and os.path.getsize(file_path) == 0:
-            QMessageBox.information(None, "File Notice", f"File '{file_path}' is empty. Initializing with headers.")
-        elif not os.path.exists(file_path):
+    elif create_if_missing: # Only create if flag is True and file doesn't exist or is empty
+        if not os.path.exists(file_path): 
             QMessageBox.information(None, "File Notice", f"File '{file_path}' not found. Creating with headers.")
-        else: # Should not be reached if logic is right
-            create_new = False
-
-        if create_new:
-            try:
-                df = pd.DataFrame(columns=expected_headers); df.to_csv(file_path, index=False)
-                return df.astype(default_dtype).fillna('')
-            except Exception as e:
-                QMessageBox.critical(None, "File Creation Error", f"Could not create {file_path}: {e}")
+        elif os.path.getsize(file_path) == 0: # File exists but is empty
+             QMessageBox.information(None, "File Notice", f"File '{file_path}' is empty. Initializing with headers.")
+        try:
+            df = pd.DataFrame(columns=expected_headers)
+            df.to_csv(file_path, index=False) 
+            return df.astype(default_dtype).fillna('')
+        except Exception as e:
+            QMessageBox.critical(None, "File Creation Error", f"Could not create {file_path}: {e}")
+            return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
+    else: # File not found/empty AND create_if_missing is False
         return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
 
 
 def append_to_csv(df_to_append, file_path, expected_headers):
-    # Ensure the DataFrame to append has all expected columns in the correct order and type
     df_ready = pd.DataFrame(columns=expected_headers) 
-    for col in expected_headers: 
-        df_ready[col] = df_to_append.get(col, pd.Series(dtype='object')).astype(str)
-    df_ready = df_ready[expected_headers]
-
+    for col in expected_headers: df_ready[col] = df_to_append.get(col, pd.Series(dtype='object')).astype(str)
+    df_ready = df_ready[expected_headers] 
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         df_ready.to_csv(file_path, index=False, header=True)
     else:
@@ -75,13 +71,13 @@ class OrderCheckInGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Order Check-In System"); self.setGeometry(150, 150, 1000, 600)
-        self.order_history_df = load_or_create_dataframe(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS)
-        self.materials_df = load_or_create_dataframe(MATERIALS_MASTER_FILE, MATERIALS_HEADERS)
-        load_or_create_dataframe(STOCK_MOVEMENTS_FILE, STOCK_MOVEMENTS_HEADERS, create_if_missing=True) # Ensure it exists
+        self.order_history_df = load_or_create_dataframe(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, create_if_missing=True) # create_if_missing for history
+        self.materials_df = load_or_create_dataframe(MATERIALS_MASTER_FILE, MATERIALS_HEADERS) # Don't create materials master if missing, rely on other GUI
+        load_or_create_dataframe(STOCK_MOVEMENTS_FILE, STOCK_MOVEMENTS_HEADERS, create_if_missing=True) # create_if_missing for movements
         self.current_selected_order_line_df_index = None 
         self.init_ui(); self.refresh_pending_orders_table()
 
-    def save_dataframe(self, df, file_path, headers_order): # NOW A METHOD
+    def save_dataframe(self, df, file_path, headers_order):
         try:
             df_to_save = df.copy() 
             for header in headers_order: 
@@ -112,14 +108,14 @@ class OrderCheckInGUI(QMainWindow):
         if 'Status' in self.order_history_df.columns:
             self.order_history_df['_status_lower'] = self.order_history_df['Status'].astype(str).str.lower()
             self.display_df = self.order_history_df[self.order_history_df['_status_lower'].isin(pending_statuses)].copy()
-            # self.order_history_df.drop(columns=['_status_lower'], inplace=True, errors='ignore') # Keep main df clean
+            # self.order_history_df.drop(columns=['_status_lower'], inplace=True, errors='ignore') # Avoid modifying main df here
         else: self.display_df = pd.DataFrame(columns=ORDER_HISTORY_HEADERS)
         cols = ['OrderID', 'Timestamp', 'MaterialID', 'MaterialName', 'QuantityOrdered', 'SupplierName', 'Status']
         for c in cols: 
             if c not in self.display_df.columns: self.display_df[c] = ""
         self.pending_table.setRowCount(self.display_df.shape[0]); self.pending_table.setColumnCount(len(cols))
         self.pending_table.setHorizontalHeaderLabels(cols)
-        for r_idx in range(self.display_df.shape[0]): # Use r_idx to avoid conflict with 'r' in outer scopes if any
+        for r_idx in range(self.display_df.shape[0]):
             for c_idx, col_name in enumerate(cols):
                 self.pending_table.setItem(r_idx, c_idx, QTableWidgetItem(str(self.display_df.iloc[r_idx].get(col_name, ''))))
         self.pending_table.resizeColumnsToContents(); self.pending_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
@@ -140,7 +136,7 @@ class OrderCheckInGUI(QMainWindow):
             (self.order_history_df['MaterialID'] == mat_id_val) &
             (self.order_history_df['Status'].astype(str).str.lower().isin(["ordered", "partially received"]))
         ].index.tolist()
-        if not original_indices: QMessageBox.warning(self, "Error", "Could not find selected order line. Data may have changed. Try refreshing."); self.clear_checkin_form(); return
+        if not original_indices: QMessageBox.warning(self, "Error", "Could not find unique selected order line. Data may have changed. Try refreshing."); self.clear_checkin_form(); return
         self.current_selected_order_line_df_index = original_indices[0] 
         line_data = self.order_history_df.loc[self.current_selected_order_line_df_index]
         self.order_id_lbl.setText(str(line_data.get('OrderID', 'N/A')))
@@ -161,14 +157,14 @@ class OrderCheckInGUI(QMainWindow):
         qty_rec = self.qty_rec_spin.value(); notes = self.notes_edit.toPlainText().strip()
         if qty_rec <= 0: QMessageBox.warning(self, "Input Error", "Quantity Received must be > 0."); return
         try:
-            order_line = self.order_history_df.loc[self.current_selected_order_line_df_index].copy() # Work on a copy
+            order_line = self.order_history_df.loc[self.current_selected_order_line_df_index].copy() 
             mat_id = str(order_line['MaterialID'])
             mat_rows = self.materials_df[self.materials_df['MaterialID'] == mat_id]
             if mat_rows.empty: QMessageBox.critical(self, "Data Error", f"MaterialID '{mat_id}' not in materials master!"); return
             mat_master_idx = mat_rows.index[0]
             stock_val = get_int_val(self.materials_df.loc[mat_master_idx, 'CurrentStock'])
             new_stock = stock_val + qty_rec
-            self.materials_df.loc[mat_master_idx, 'CurrentStock'] = str(new_stock) # Update DataFrame
+            self.materials_df.loc[mat_master_idx, 'CurrentStock'] = str(new_stock) 
             
             self.order_history_df.loc[self.current_selected_order_line_df_index, 'Status'] = "Received"
             current_notes = str(self.order_history_df.loc[self.current_selected_order_line_df_index, 'Notes'])
@@ -184,12 +180,10 @@ class OrderCheckInGUI(QMainWindow):
             self.save_dataframe(self.order_history_df, ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS)
             
             QMessageBox.information(self, "Success", f"Receipt of {qty_rec} for {mat_id} processed.")
-            # Reload data for tables to ensure they are fresh after saves
-            self.order_history_df = load_or_create_dataframe(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS) # Reload
+            self.order_history_df = load_or_create_dataframe(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS) 
             self.refresh_pending_orders_table(); self.clear_checkin_form()
         except Exception as e: 
             QMessageBox.critical(self, "Processing Error", f"An error occurred: {e}")
-            # Optionally reload dataframes here too to reset state if error was complex
             self.order_history_df = load_or_create_dataframe(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS)
             self.materials_df = load_or_create_dataframe(MATERIALS_MASTER_FILE, MATERIALS_HEADERS)
             self.refresh_pending_orders_table()
