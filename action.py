@@ -93,15 +93,18 @@ def send_po_email(recipient_email, subject, body_text):
 
     try:
         print(f"Attempting to send email to {recipient_email} via {SMTP_SERVER}:{SMTP_PORT}...")
-        if SMTP_USE_TLS:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-            server.starttls() # Secure the connection
-        else: # Assumes SSL if not TLS, or direct if port is for non-encrypted (not recommended)
-             # For SSL, smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) is often used.
-             # This basic example uses TLS by default; adjust if your server uses SSL on a different port.
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) if SMTP_PORT == 465 else smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-
-
+        if SMTP_PORT == 465: # Explicitly handle port 465 for SSL
+            print("Using SMTP_SSL for port 465.")
+            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=10) # Added timeout
+        elif SMTP_USE_TLS: # Handle STARTTLS for other ports like 587
+            print("Using SMTP with STARTTLS.")
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) # Added timeout
+            server.starttls()
+        else: # Fallback for other non-TLS, non-465 scenarios
+            print("Using basic SMTP (no explicit TLS/SSL).")
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) # Added timeout
+        
+        print(f"Attempting login with {SMTP_SENDER_EMAIL}...")
         server.login(SMTP_SENDER_EMAIL, SMTP_SENDER_PASSWORD)
         server.sendmail(SMTP_SENDER_EMAIL, recipient_email, msg.as_string())
         server.quit()
@@ -113,6 +116,8 @@ def send_po_email(recipient_email, subject, body_text):
         print(f"SMTP Server Disconnected: Check server address and port. Details: {e}")
     except smtplib.SMTPConnectError as e:
         print(f"SMTP Connect Error: Could not connect to server. Details: {e}")
+    except TimeoutError as e: # Catch explicit timeout
+        print(f"SMTP Timeout Error: Connection attempt timed out. Details: {e}")
     except Exception as e:
         print(f"An unexpected error occurred while sending email: {e}")
     return False
