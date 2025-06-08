@@ -3,12 +3,16 @@
     "website": "https://colourbyte.co.uk/",
     "email": "toby@nbnesigns.com",
     "contact_person": null,
-    "phone": null
-    "MaterialName1": "Black Epson Ink",
-    "MaterialName2": "Yellow Epson Ink",
-    "MaterialName3": "Magenta Epson Ink",
-    "MaterialName4": "Cyan Epson Ink"
-  },
+    "phone": null,
+    "order_method": "email", /* Or your actual method */
+    "supplier_website": "https://colourbyte.co.uk/", /* Or ordering portal */
+    "materials_supplied": [ /* THIS IS THE KEY CHANGE */
+        "Black Epson Ink",
+        "Yellow Epson Ink",
+        "Magenta Epson Ink",
+        "Cyan Epson Ink"
+    ]
+},
   "Curry and Sons": {
     "website": "howickscargas.co.uk",
     "email": "toby@nbnesigns.com",
