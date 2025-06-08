@@ -155,12 +155,29 @@ class DataEntryHubGUI(QMainWindow):
 
     def on_material_selected(self):
         rows = self.materials_table_view.selectionModel().selectedRows()
-        if not rows: self.clear_material_form(); return
-        idx = MATERIALS_HEADERS.index('MaterialID')
-        mat_id_item = self.materials_table_view.item(rows[0].row(), idx)
-        if not mat_id_item: return; mat_id = mat_id_item.text()
-        data_rows = self.materials_df[self.materials_df['MaterialID'] == mat_id]
-        if data_rows.empty: self.clear_material_form(); return; data = data_rows.iloc[0]
+        if not rows:
+            self.clear_material_form()
+            return
+
+        selected_row_index_in_view = rows[0].row()
+        material_id_col_idx = MATERIALS_HEADERS.index('MaterialID')
+        mat_id_item = self.materials_table_view.item(selected_row_index_in_view, material_id_col_idx)
+
+        if not mat_id_item or not mat_id_item.text():
+            self.clear_material_form()
+            return
+
+        material_id = mat_id_item.text() # Variable `material_id` is defined
+
+        # Use the corrected variable `material_id` here:
+        data_rows = self.materials_df[self.materials_df['MaterialID'] == material_id]
+
+        if data_rows.empty:
+            self.clear_material_form()
+            return
+
+        data = data_rows.iloc[0]
+
         self.mat_id_edit.setText(str(data.get('MaterialID',''))); self.mat_id_edit.setReadOnly(True)
         self.mat_name_edit.setText(str(data.get('MaterialName','')))
         self.mat_cat_edit.setText(str(data.get('Category',''))); self.mat_uom_edit.setText(str(data.get('UnitOfMeasure','')))
