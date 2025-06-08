@@ -3,7 +3,8 @@ import pandas as pd
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QLabel, QFormLayout,
-    QMessageBox, QComboBox, QSpinBox, QTextEdit, QHeaderView, QDoubleSpinBox, QGroupBox # Added QDoubleSpinBox and QGroupBox
+    QMessageBox, QComboBox, QSpinBox, QTextEdit, QHeaderView, QDoubleSpinBox,
+    QGroupBox # Added QGroupBox
 )
 from PyQt6.QtCore import Qt
 import os
@@ -13,8 +14,25 @@ SUPPLIERS_FILE = "suppliers.csv"
 
 MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 'CurrentStock',
                      'ReorderPoint', 'StandardOrderQuantity', 'PreferredSupplierID',
-                     'ProductPageURL', 'LeadTimeDays', 'SafetyStockQuantity', 'Notes', 'CurrentPrice'] # Added CurrentPrice
+                     'ProductPageURL', 'LeadTimeDays', 'SafetyStockQuantity', 'Notes', 'CurrentPrice']
 SUPPLIERS_HEADERS = ['SupplierID', 'SupplierName', 'ContactPerson', 'Email', 'Phone', 'Website', 'OrderMethod']
+
+# --- Correctly Defined Helper Functions (Module Level) ---
+def get_int_val(val_str, default=0):
+    try:
+        if pd.notna(val_str) and str(val_str).strip() != '':
+            return int(float(str(val_str))) # Convert to float first for "10.0" like strings
+        return default
+    except ValueError:
+        return default
+
+def get_float_val(val_str, default=0.0):
+    try:
+        if pd.notna(val_str) and str(val_str).strip() != '':
+            return float(str(val_str))
+        return default
+    except ValueError:
+        return default
 
 class DataEntryHubGUI(QMainWindow):
     def __init__(self):
@@ -27,19 +45,19 @@ class DataEntryHubGUI(QMainWindow):
         if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
             try:
                 df = pd.read_csv(file_path, dtype=str).fillna('')
-                for header in expected_headers: # Ensure all columns exist
+                for header in expected_headers:
                     if header not in df.columns: df[header] = ''
-                return df[expected_headers].fillna('') # Enforce order & fill any new NaNs
+                return df[expected_headers].fillna('')
             except Exception as e:
                 QMessageBox.critical(self, "Load Error", f"Error loading {file_path}: {e}")
                 return pd.DataFrame(columns=expected_headers).astype(str).fillna('')
         return pd.DataFrame(columns=expected_headers).astype(str).fillna('')
 
-    def save_dataframe(self, df, file_path, headers_order): # Added headers_order
+    def save_dataframe(self, df, file_path, headers_order):
         try:
-            for header in headers_order: # Ensure all expected columns exist
+            for header in headers_order:
                  if header not in df.columns: df[header] = ''
-            df[headers_order].to_csv(file_path, index=False) # Use headers_order
+            df[headers_order].to_csv(file_path, index=False)
             QMessageBox.information(self, "Success", f"Data saved to {file_path}")
         except Exception as e: QMessageBox.critical(self, "Save Error", f"Error saving to {file_path}: {e}")
 
@@ -57,7 +75,7 @@ class DataEntryHubGUI(QMainWindow):
         self.mat_stock_spin = QSpinBox(); self.mat_stock_spin.setRange(0,999999)
         self.mat_rop_spin = QSpinBox(); self.mat_rop_spin.setRange(0,999999)
         self.mat_soq_spin = QSpinBox(); self.mat_soq_spin.setRange(0,999999)
-        self.mat_price_spin = QDoubleSpinBox(); self.mat_price_spin.setRange(0, 99999.99); self.mat_price_spin.setDecimals(2); self.mat_price_spin.setPrefix("£") # NEW
+        self.mat_price_spin = QDoubleSpinBox(); self.mat_price_spin.setRange(0, 99999.99); self.mat_price_spin.setDecimals(2); self.mat_price_spin.setPrefix("£")
         self.mat_sup_id_edit = QLineEdit(); self.mat_url_edit = QLineEdit()
         self.mat_lead_spin = QSpinBox(); self.mat_lead_spin.setRange(0,365)
         self.mat_safe_stock_spin = QSpinBox(); self.mat_safe_stock_spin.setRange(0,999999)
@@ -66,7 +84,7 @@ class DataEntryHubGUI(QMainWindow):
         form.addRow("MaterialID*:", self.mat_id_edit); form.addRow("MaterialName*:", self.mat_name_edit)
         form.addRow("Category:", self.mat_cat_edit); form.addRow("Unit of Measure:", self.mat_uom_edit)
         form.addRow("Current Stock:", self.mat_stock_spin); form.addRow("Reorder Point:", self.mat_rop_spin)
-        form.addRow("Std. Order Qty:", self.mat_soq_spin); form.addRow("Current Price:", self.mat_price_spin) # NEW
+        form.addRow("Std. Order Qty:", self.mat_soq_spin); form.addRow("Current Price:", self.mat_price_spin)
         form.addRow("Preferred SupplierID:", self.mat_sup_id_edit)
         form.addRow("Product Page URL:", self.mat_url_edit); form.addRow("Lead Time (Days):", self.mat_lead_spin)
         form.addRow("Safety Stock Qty:", self.mat_safe_stock_spin); form.addRow("Notes:", self.mat_notes_edit)
@@ -81,9 +99,9 @@ class DataEntryHubGUI(QMainWindow):
         self.suppliers_tab = QWidget(); self.tabs.addTab(self.suppliers_tab, "Suppliers (Coming Soon)")
         self.suppliers_tab.setLayout(QVBoxLayout()); self.suppliers_tab.layout().addWidget(QLabel("Supplier management here."))
 
-    def refresh_materials_table(self): # Largely same, ensures CurrentPrice column is handled by MATERIALS_HEADERS
+    def refresh_materials_table(self):
         if self.materials_df is None: return
-        for header in MATERIALS_HEADERS: # Ensure all columns exist in df for display
+        for header in MATERIALS_HEADERS:
             if header not in self.materials_df.columns: self.materials_df[header] = ''
         display_df = self.materials_df[MATERIALS_HEADERS].fillna('')
 
@@ -94,28 +112,29 @@ class DataEntryHubGUI(QMainWindow):
             for j, header in enumerate(MATERIALS_HEADERS):
                 self.materials_table_view.setItem(i, j, QTableWidgetItem(str(display_df.iloc[i].get(header, ''))))
         self.materials_table_view.resizeColumnsToContents()
-        self.materials_table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive) # Allow column resize
         self.materials_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
 
     def on_material_selected(self):
         rows = self.materials_table_view.selectionModel().selectedRows()
         if not rows: self.clear_material_form(); return
+
         material_id_item = self.materials_table_view.item(rows[0].row(), MATERIALS_HEADERS.index('MaterialID'))
-        if not material_id_item: return; material_id = material_id_item.text()
+        if not material_id_item: return
+        material_id = material_id_item.text()
+
         data_rows = self.materials_df[self.materials_df['MaterialID'] == material_id]
-        if data_rows.empty: self.clear_material_form(); return
-        data = data_rows.iloc[0]
+        if data_rows.empty: self.clear_material_form(); return  # Important: return if no matching row in df
+        data = data_rows.iloc[0] # data will be a Series
 
         self.mat_id_edit.setText(str(data.get('MaterialID',''))); self.mat_id_edit.setReadOnly(True)
         self.mat_name_edit.setText(str(data.get('MaterialName','')))
         self.mat_cat_edit.setText(str(data.get('Category',''))); self.mat_uom_edit.setText(str(data.get('UnitOfMeasure','')))
-        def get_int_val(val_str, default=0): try: return int(float(str(val_str))) if pd.notna(val_str) and str(val_str).strip()!='' else default; except ValueError: return default
-        def get_float_val(val_str, default=0.0): try: return float(str(val_str)) if pd.notna(val_str) and str(val_str).strip()!='' else default; except ValueError: return default
+
         self.mat_stock_spin.setValue(get_int_val(data.get('CurrentStock')))
         self.mat_rop_spin.setValue(get_int_val(data.get('ReorderPoint')))
         self.mat_soq_spin.setValue(get_int_val(data.get('StandardOrderQuantity')))
-        self.mat_price_spin.setValue(get_float_val(data.get('CurrentPrice'))) # NEW
+        self.mat_price_spin.setValue(get_float_val(data.get('CurrentPrice')))
         self.mat_sup_id_edit.setText(str(data.get('PreferredSupplierID','')))
         self.mat_url_edit.setText(str(data.get('ProductPageURL','')))
         self.mat_lead_spin.setValue(get_int_val(data.get('LeadTimeDays')))
@@ -126,7 +145,7 @@ class DataEntryHubGUI(QMainWindow):
         self.mat_id_edit.clear(); self.mat_id_edit.setReadOnly(False); self.mat_id_edit.setPlaceholderText("Unique ID*")
         for editor in [self.mat_name_edit, self.mat_cat_edit, self.mat_uom_edit, self.mat_sup_id_edit, self.mat_url_edit, self.mat_notes_edit]: editor.clear()
         for spinbox in [self.mat_stock_spin, self.mat_rop_spin, self.mat_soq_spin, self.mat_lead_spin, self.mat_safe_stock_spin]: spinbox.setValue(0)
-        self.mat_price_spin.setValue(0.0) # NEW
+        self.mat_price_spin.setValue(0.0)
         self.materials_table_view.clearSelection()
 
     def add_new_material(self): self.clear_material_form(); self.mat_id_edit.setFocus()
@@ -141,7 +160,7 @@ class DataEntryHubGUI(QMainWindow):
             'Category': self.mat_cat_edit.text().strip(), 'UnitOfMeasure': self.mat_uom_edit.text().strip(),
             'CurrentStock': str(self.mat_stock_spin.value()), 'ReorderPoint': str(self.mat_rop_spin.value()),
             'StandardOrderQuantity': str(self.mat_soq_spin.value()),
-            'CurrentPrice': "%.2f" % self.mat_price_spin.value(), # NEW - format as string with 2 decimals
+            'CurrentPrice': "%.2f" % self.mat_price_spin.value(),
             'PreferredSupplierID': self.mat_sup_id_edit.text().strip(),
             'ProductPageURL': self.mat_url_edit.text().strip(),
             'LeadTimeDays': str(self.mat_lead_spin.value()),
@@ -154,24 +173,24 @@ class DataEntryHubGUI(QMainWindow):
             idx_to_update = existing_indices[0]
             for k, v in data_dict.items(): self.materials_df.loc[idx_to_update, k] = v
         else:
-            new_row_df = pd.DataFrame([data_dict], columns=MATERIALS_HEADERS) # Ensures correct column order
+            new_row_df = pd.DataFrame([data_dict], columns=MATERIALS_HEADERS)
             self.materials_df = pd.concat([self.materials_df, new_row_df], ignore_index=True)
 
-        self.save_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS) # Pass headers for saving
+        self.save_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS)
         self.refresh_materials_table(); self.clear_material_form()
 
     def delete_material(self):
         rows = self.materials_table_view.selectionModel().selectedRows()
         if not rows: QMessageBox.warning(self, "Selection Error", "Select material to delete."); return
-        material_id_col_index = MATERIALS_HEADERS.index('MaterialID')
+        material_id_col_index = MATERIALS_HEADERS.index('MaterialID') # Should be 0 if MaterialID is first
         mat_id_del = self.materials_table_view.item(rows[0].row(), material_id_col_index).text()
         if QMessageBox.question(self, "Confirm", f"Delete '{mat_id_del}'?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
             self.materials_df = self.materials_df[self.materials_df['MaterialID'] != mat_id_del].reset_index(drop=True)
-            self.save_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS) # Pass headers
+            self.save_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS)
             self.refresh_materials_table(); self.clear_material_form()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    win = DataEntryHubGUI() # Assuming your main class is DataEntryHubGUI
+    win = DataEntryHubGUI() 
     win.show()
     sys.exit(app.exec())
