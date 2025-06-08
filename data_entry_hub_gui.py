@@ -165,4 +165,7 @@ class DataEntryHubGUI(QMainWindow):
             self.refresh_materials_table(); self.clear_material_form()
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv); win = DataEntryHubGUI(); win.show(); sy
+    app = QApplication(sys.argv)
+    win = DataEntryHubGUI() # Or main_window = DataEntryHubGUI()
+    win.show()
+    sys.exit(app.exec())
