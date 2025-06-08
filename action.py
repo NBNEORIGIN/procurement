@@ -58,7 +58,7 @@ Please find below our purchase order:
 
 Could you please confirm receipt of this order and provide an estimated delivery date?
 
-If you have any questions, please don't hesitate to contact us.
+If you have any questions, please don\'t hesitate to contact us.
 
 {YOUR_COMPANY_CONTACT_INFO}
 """
