@@ -3,16 +3,16 @@ import os # For environment variables
 from email.mime.text import MIMEText
 
 # --- Email Configuration (MUST BE COMPLETED AND HANDLED SECURELY) ---
-SMTP_SERVER = os.environ.get('PROCUREMENT_SMTP_SERVER', 'your_smtp_server.com') # Example: 'smtp.gmail.com'
-SMTP_PORT = int(os.environ.get('PROCUREMENT_SMTP_PORT', 587)) # Example: 587 for TLS, 465 for SSL
-SMTP_SENDER_EMAIL = os.environ.get('PROCUREMENT_SMTP_SENDER_EMAIL', 'your_email@example.com')
+SMTP_SERVER = os.environ.get('PROCUREMENT_SMTP_SERVER', 'smtp.ionos.co.uk') # Example: 'smtp.gmail.com'
+SMTP_PORT = int(os.environ.get('PROCUREMENT_SMTP_PORT', 465)) # Example: 587 for TLS, 465 for SSL
+SMTP_SENDER_EMAIL = os.environ.get('PROCUREMENT_SMTP_SENDER_EMAIL', 'orders@nbnesigns.com')
 # IMPORTANT: Use environment variables or a secure method for the password
-SMTP_SENDER_PASSWORD = os.environ.get('PROCUREMENT_SMTP_PASSWORD', 'YOUR_APP_PASSWORD_OR_REGULAR_PASSWORD')
+SMTP_SENDER_PASSWORD = os.environ.get('PROCUREMENT_SMTP_PASSWORD', '!49Monkswood')
 SMTP_USE_TLS = os.environ.get('PROCUREMENT_SMTP_USE_TLS', 'True').lower() == 'true' # Use TLS by default
 
 # --- Company Configuration (from previous version) ---
-YOUR_COMPANY_NAME = "Your Company Name" # Customize this
-YOUR_COMPANY_CONTACT_INFO = """\
+YOUR_COMPANY_NAME = "NBNE" # Customize this
+YOUR_COMPANY_CONTACT_INFO = "Toby"\
 Regards,
 
 The Procurement Team
