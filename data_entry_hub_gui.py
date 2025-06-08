@@ -6,7 +6,8 @@ from PyQt6.QtWidgets import (
     QMessageBox, QComboBox, QSpinBox, QTextEdit, QHeaderView, QDoubleSpinBox,
     QGroupBox
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QUrl # QUrl Added
+from PyQt6.QtGui import QDesktopServices # Added QDesktopServices
 import os
 
 MATERIALS_FILE = "materials_master.csv"
@@ -68,7 +69,11 @@ class DataEntryHubGUI(QMainWindow):
         self.mat_soq_spin = QSpinBox(); self.mat_soq_spin.setRange(0,999999)
         self.mat_price_spin = QDoubleSpinBox(); self.mat_price_spin.setRange(0,99999.99); self.mat_price_spin.setDecimals(2); self.mat_price_spin.setPrefix("£")
         self.mat_pref_sup_combo = QComboBox()
+
         self.mat_url_edit = QLineEdit()
+        self.mat_url_open_btn = QPushButton("Open Link"); self.mat_url_open_btn.clicked.connect(self.open_material_url) # New
+        mat_url_layout = QHBoxLayout(); mat_url_layout.addWidget(self.mat_url_edit); mat_url_layout.addWidget(self.mat_url_open_btn) # New
+
         self.mat_lead_spin = QSpinBox(); self.mat_lead_spin.setRange(0,365)
         self.mat_safe_stock_spin = QSpinBox(); self.mat_safe_stock_spin.setRange(0,999999)
         self.mat_notes_edit = QTextEdit(); self.mat_notes_edit.setFixedHeight(60)
@@ -77,7 +82,8 @@ class DataEntryHubGUI(QMainWindow):
         mat_form.addRow("Current Stock:", self.mat_stock_spin); mat_form.addRow("Reorder Point:", self.mat_rop_spin)
         mat_form.addRow("Std. Order Qty:", self.mat_soq_spin); mat_form.addRow("Current Price:", self.mat_price_spin)
         mat_form.addRow("Preferred SupplierID:", self.mat_pref_sup_combo)
-        mat_form.addRow("Product Page URL:", self.mat_url_edit); mat_form.addRow("Lead Time (Days):", self.mat_lead_spin)
+        mat_form.addRow("Product Page URL:", mat_url_layout) # Changed to layout
+        mat_form.addRow("Lead Time (Days):", self.mat_lead_spin)
         mat_form.addRow("Safety Stock Qty:", self.mat_safe_stock_spin); mat_form.addRow("Notes:", self.mat_notes_edit)
         mat_form_group.setLayout(mat_form); mat_layout.addWidget(mat_form_group)
         mat_btns = QHBoxLayout(); mat_add=QPushButton("Add New"); mat_save=QPushButton("Save"); mat_del=QPushButton("Delete"); mat_clear=QPushButton("Clear Form")
@@ -92,11 +98,16 @@ class DataEntryHubGUI(QMainWindow):
         sup_layout.addWidget(self.suppliers_table_view)
         sup_form_group = QGroupBox("Supplier Details"); sup_form_details = QFormLayout()
         self.sup_id_edit = QLineEdit(); self.sup_name_edit = QLineEdit(); self.sup_contact_edit = QLineEdit()
-        self.sup_email_edit = QLineEdit(); self.sup_phone_edit = QLineEdit(); self.sup_website_edit = QLineEdit()
+        self.sup_email_edit = QLineEdit(); self.sup_phone_edit = QLineEdit()
+
+        self.sup_website_edit = QLineEdit()
+        self.sup_website_open_btn = QPushButton("Open Link"); self.sup_website_open_btn.clicked.connect(self.open_supplier_website) # New
+        sup_website_layout = QHBoxLayout(); sup_website_layout.addWidget(self.sup_website_edit); sup_website_layout.addWidget(self.sup_website_open_btn) # New
+
         self.sup_order_method_combo = QComboBox(); self.sup_order_method_combo.addItems(["", "email", "online", "phone", "other"])
         sup_form_details.addRow("SupplierID*:", self.sup_id_edit); sup_form_details.addRow("SupplierName*:", self.sup_name_edit)
         sup_form_details.addRow("Contact Person:", self.sup_contact_edit); sup_form_details.addRow("Email:", self.sup_email_edit)
-        sup_form_details.addRow("Phone:", self.sup_phone_edit); sup_form_details.addRow("Website:", self.sup_website_edit)
+        sup_form_details.addRow("Phone:", self.sup_phone_edit); sup_form_details.addRow("Website:", sup_website_layout) # Changed to layout
         sup_form_details.addRow("Order Method:", self.sup_order_method_combo)
         sup_form_group.setLayout(sup_form_details); sup_layout.addWidget(sup_form_group)
         sup_btns = QHBoxLayout(); sup_add=QPushButton("Add New"); sup_save=QPushButton("Save"); sup_del=QPushButton("Delete"); sup_clear=QPushButton("Clear Form")
@@ -105,6 +116,18 @@ class DataEntryHubGUI(QMainWindow):
         for btn in [sup_add, sup_save, sup_del, sup_clear]: sup_btns.addWidget(btn)
         sup_layout.addLayout(sup_btns)
         self.populate_preferred_supplier_dropdown()
+
+    def open_material_url(self): # NEW METHOD
+        url_string = self.mat_url_edit.text().strip()
+        if not url_string: QMessageBox.information(self, "No URL", "Product Page URL field is empty."); return
+        if not url_string.startswith(('http://', 'https://')): url_string = 'http://' + url_string
+        if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
+
+    def open_supplier_website(self): # NEW METHOD
+        url_string = self.sup_website_edit.text().strip()
+        if not url_string: QMessageBox.information(self, "No URL", "Supplier Website field is empty."); return
+        if not url_string.startswith(('http://', 'https://')): url_string = 'http://' + url_string
+        if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
 
     def populate_preferred_supplier_dropdown(self):
         current_selection = self.mat_pref_sup_combo.currentData()
@@ -133,20 +156,11 @@ class DataEntryHubGUI(QMainWindow):
     def on_material_selected(self):
         rows = self.materials_table_view.selectionModel().selectedRows()
         if not rows: self.clear_material_form(); return
-
-        material_id_col_idx = MATERIALS_HEADERS.index('MaterialID')
-        mat_id_item = self.materials_table_view.item(rows[0].row(), material_id_col_idx)
-
-        if not mat_id_item or not mat_id_item.text():
-            self.clear_material_form(); return
-
-        material_id = mat_id_item.text() # CORRECTED: Use material_id
-
-        data_rows = self.materials_df[self.materials_df['MaterialID'] == material_id] # CORRECTED: Use material_id
-
-        if data_rows.empty: self.clear_material_form(); return
-        data = data_rows.iloc[0]
-
+        idx = MATERIALS_HEADERS.index('MaterialID')
+        mat_id_item = self.materials_table_view.item(rows[0].row(), idx)
+        if not mat_id_item: return; mat_id = mat_id_item.text()
+        data_rows = self.materials_df[self.materials_df['MaterialID'] == mat_id]
+        if data_rows.empty: self.clear_material_form(); return; data = data_rows.iloc[0]
         self.mat_id_edit.setText(str(data.get('MaterialID',''))); self.mat_id_edit.setReadOnly(True)
         self.mat_name_edit.setText(str(data.get('MaterialName','')))
         self.mat_cat_edit.setText(str(data.get('Category',''))); self.mat_uom_edit.setText(str(data.get('UnitOfMeasure','')))
@@ -167,8 +181,7 @@ class DataEntryHubGUI(QMainWindow):
         self.mat_id_edit.clear(); self.mat_id_edit.setReadOnly(False); self.mat_id_edit.setPlaceholderText("Unique ID*")
         for editor in [self.mat_name_edit, self.mat_cat_edit, self.mat_uom_edit, self.mat_url_edit, self.mat_notes_edit]: editor.clear()
         for spinbox in [self.mat_stock_spin,self.mat_rop_spin,self.mat_soq_spin,self.mat_lead_spin,self.mat_safe_stock_spin]: spinbox.setValue(0)
-        self.mat_price_spin.setValue(0.0)
-        self.mat_pref_sup_combo.setCurrentIndex(0)
+        self.mat_price_spin.setValue(0.0); self.mat_pref_sup_combo.setCurrentIndex(0)
         self.materials_table_view.clearSelection()
 
     def add_new_material(self): self.clear_material_form(); self.mat_id_edit.setFocus()
@@ -205,8 +218,7 @@ class DataEntryHubGUI(QMainWindow):
             self.save_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS)
             self.refresh_materials_table(); self.clear_material_form()
 
-    # --- Supplier Methods ---
-    def refresh_suppliers_table(self):
+    def refresh_suppliers_table(self): # Supplier methods
         if self.suppliers_df is None: return
         for header in SUPPLIERS_HEADERS:
             if header not in self.suppliers_df.columns: self.suppliers_df[header] = ''
@@ -233,7 +245,7 @@ class DataEntryHubGUI(QMainWindow):
         self.sup_contact_edit.setText(str(data.get('ContactPerson', '')))
         self.sup_email_edit.setText(str(data.get('Email', '')))
         self.sup_phone_edit.setText(str(data.get('Phone', '')))
-        self.sup_website_edit.setText(str(data.get('Website', '')))
+        self.sup_website_edit.setText(str(data.get('Website', ''))) # Populates the QLineEdit part
         self.sup_order_method_combo.setCurrentText(str(data.get('OrderMethod', '')))
 
     def clear_supplier_form(self):
@@ -251,7 +263,7 @@ class DataEntryHubGUI(QMainWindow):
         data_dict.update({
             'SupplierID': sup_id, 'SupplierName': sup_name,
             'ContactPerson': self.sup_contact_edit.text().strip(), 'Email': self.sup_email_edit.text().strip(),
-            'Phone': self.sup_phone_edit.text().strip(), 'Website': self.sup_website_edit.text().strip(),
+            'Phone': self.sup_phone_edit.text().strip(), 'Website': self.sup_website_edit.text().strip(), # From QLineEdit
             'OrderMethod': self.sup_order_method_combo.currentText()
         })
         existing = self.suppliers_df.index[self.suppliers_df['SupplierID'] == sup_id].tolist()
@@ -279,4 +291,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = DataEntryHubGUI()
     win.show()
-    sys.exit(app.exec()) # Ensure this is the correct ending
+    sys.exit(app.exec()) # Corrected ending
