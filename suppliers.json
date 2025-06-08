@@ -4,9 +4,9 @@
     "email": "toby@nbnesigns.com",
     "contact_person": null,
     "phone": null,
-    "order_method": "email", /* Or your actual method */
-    "supplier_website": "https://colourbyte.co.uk/", /* Or ordering portal */
-    "materials_supplied": [ /* THIS IS THE KEY CHANGE */
+    "order_method": "email",
+    "supplier_website": "https://colourbyte.co.uk/",
+    "materials_supplied": [
         "Black Epson Ink",
         "Yellow Epson Ink",
         "Magenta Epson Ink",
