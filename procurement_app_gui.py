@@ -271,7 +271,17 @@ class DataManagementWidget(QWidget): # Same as before
             self.parent_save_cb(SUPPLIERS_FILE, self.suppliers_df, SUPPLIERS_HEADERS)
             self.refresh_suppliers_table(); self.clear_supplier_form()
             self.parent_refresh_sup_dd_cb()
+# procurement_app_gui.py
+# Ensure all necessary imports from your previous working version are here
+# (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
+#  QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QLabel, QFormLayout,
+#  QMessageBox, QComboBox, QSpinBox, QTextEdit, QHeaderView, QDoubleSpinBox,
+#  QGroupBox, Qt, QUrl, QDesktopServices, os, datetime, pandas as pd)
 
+# ... (Keep your existing MATERIALS_FILE, SUPPLIERS_FILE, ORDER_HISTORY_FILE constants)
+# ... (Keep your existing MATERIALS_HEADERS, SUPPLIERS_HEADERS, ORDER_HISTORY_HEADERS constants)
+# ... (Keep your existing get_int_val, get_float_val, load_or_create_dataframe_app helper functions)
+# ... (Keep your existing DataManagementWidget class - unchanged from last working version)
 class ProcurementAppGUI(QMainWindow):
     def __init__(self):
         super().__init__()
