@@ -779,34 +779,38 @@ class ProcurementAppGUI(QMainWindow):
                 self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("Total Price"),QTableWidgetItem(f"{(item_dict['QuantityOrdered']*item_dict['UnitPricePaid']):.2f}"))
                 self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("OrderMethod"),QTableWidgetItem(method))
 
-                action_details_idx = self.proposed_orders_cols.index("ActionDetails")
-                url_to_open = ""
+                action_details_col_idx = self.proposed_orders_cols.index("ActionDetails")
+                action_str = ""
+                url_to_open = "" # Specific URL for the clickable link if applicable
 
                 if method == "online":
-                    item_url = item_dict['ProductPageURL']
-                    sup_web = sup_info.get('SupplierWebsite', 'N/A')
-                    url_to_open = item_url if item_url else sup_web
-
-                    if url_to_open:
-                        # Ensure URL has a scheme for QDesktopServices
-                        parsed_url_to_open = url_to_open
-                        if not parsed_url_to_open.startswith(('http://', 'https://')):
-                            parsed_url_to_open = 'http://' + parsed_url_to_open
-
-                        link_label = QLabel(f'<a href="{parsed_url_to_open}">{url_to_open}</a>')
-                        link_label.setTextFormat(Qt.TextFormat.RichText)
-                        link_label.setOpenExternalLinks(True) # Works with QDesktopServices by default
-                        self.proposed_orders_table.setCellWidget(r, action_details_idx, link_label)
-                    else:
-                        self.proposed_orders_table.setItem(r, action_details_idx, QTableWidgetItem("Online order: No URL"))
+                    item_page_url = item_dict['ProductPageURL']
+                    supplier_website_url = sup_info.get('SupplierWebsite', 'N/A')
+                    # Prioritize item-specific URL, fallback to supplier website
+                    url_to_open = item_page_url if item_page_url else supplier_website_url
+                    action_str = f"Online order at: {url_to_open if url_to_open else 'No URL available'}"
                 elif method == "email":
                     action_str = f"Email: {sup_info.get('Email', 'N/A')}"
-                    self.proposed_orders_table.setItem(r, action_details_idx, QTableWidgetItem(action_str))
                 elif method == "phone":
                     action_str = f"Phone: {sup_info.get('Phone', 'N/A')}"
-                    self.proposed_orders_table.setItem(r, action_details_idx, QTableWidgetItem(action_str))
                 else: # Manual Review or other methods
-                    self.proposed_orders_table.setItem(r, action_details_idx, QTableWidgetItem("Manual Review"))
+                    action_str = "Manual Review"
+
+                action_item = QTableWidgetItem()
+                action_item.setData(Qt.ItemDataRole.UserRole, action_str) # Store raw string in UserRole
+                self.proposed_orders_table.setItem(r, action_details_col_idx, action_item)
+
+                if method == "online" and url_to_open and url_to_open != 'N/A':
+                    parsed_url_to_open = url_to_open
+                    if not parsed_url_to_open.startswith(('http://', 'https://')):
+                        parsed_url_to_open = 'http://' + parsed_url_to_open
+
+                    link_label = QLabel(f'<a href="{parsed_url_to_open}">{url_to_open}</a>')
+                    link_label.setTextFormat(Qt.TextFormat.RichText)
+                    link_label.setOpenExternalLinks(True)
+                    self.proposed_orders_table.setCellWidget(r, action_details_col_idx, link_label)
+                else:
+                    action_item.setText(action_str) # Set display text if no widget overlay
 
         self.proposed_orders_table.resizeColumnsToContents(); self.order_process_log.append("Order prep complete.")
         self.process_selected_orders_button.setEnabled(True if self.proposed_orders_table.rowCount() > 0 else False)
@@ -836,7 +840,7 @@ class ProcurementAppGUI(QMainWindow):
                     "SupplierID": supplier_id, "SupplierName": supplier_name, "MaterialID": material_id, 
                     "MaterialName": material_name, "QuantityOrdered": qty_ordered, "UnitPricePaid": unit_price,
                     "OrderMethod": order_method,
-                    "ActionDetail": self.proposed_orders_table.item(r, self.proposed_orders_cols.index("ActionDetails")).text()
+                    "ActionDetail": (item.data(Qt.ItemDataRole.UserRole) if (item := self.proposed_orders_table.item(r, self.proposed_orders_cols.index("ActionDetails"))) else "")
                 })
         if not orders_to_log_and_action: self.order_process_log.append("No orders were selected."); return
         self.order_process_log.append(f"Found {len(orders_to_log_and_action)} selected lines.")
