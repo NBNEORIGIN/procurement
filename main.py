@@ -13,7 +13,7 @@ MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 
 SUPPLIERS_HEADERS = ['SupplierID', 'SupplierName', 'ContactPerson', 'Email', 'Phone', 'Website', 'OrderMethod']
 ORDER_HISTORY_HEADERS = ['OrderID', 'Timestamp', 'MaterialID', 'MaterialName', 'QuantityOrdered', 
                          'UnitPricePaid', 'TotalPricePaid', 'SupplierID', 'SupplierName', 
-                         'OrderMethod', 'Status', 'Notes']
+                         'OrderMethod', 'Status', 'QuantityReceived', 'DateReceived', 'Notes']
 
 def load_csv_to_dataframe(file_path, expected_headers, create_if_missing=False):
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
@@ -125,7 +125,7 @@ def main():
                 'MaterialName': i['MaterialName'], 'QuantityOrdered': i['QuantityOrdered'],
                 'UnitPricePaid': i['UnitPricePaid'], 'TotalPricePaid': i['QuantityOrdered'] * i['UnitPricePaid'],
                 'SupplierID': sup_id, 'SupplierName': sup_name, 'OrderMethod': logged_method,
-                'Status': 'Ordered', 'Notes': '' })
+                'Status': 'Ordered', 'QuantityReceived': 0, 'DateReceived': '', 'Notes': '' })
         
         if history_entries:
             append_to_csv(pd.DataFrame(history_entries), ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS)

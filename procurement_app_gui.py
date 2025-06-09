@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QCheckBox, QMenu # <--- QMenu ADDED, QCheckBox ADDED HERE
 )
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QDesktopServices, QIntValidator
 import os
 from datetime import datetime
 from main import append_to_csv
@@ -25,7 +25,7 @@ MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 
 SUPPLIERS_HEADERS = ['SupplierID', 'SupplierName', 'ContactPerson', 'Email', 'Phone', 'Website', 'OrderMethod']
 ORDER_HISTORY_HEADERS = ['OrderID', 'Timestamp', 'MaterialID', 'MaterialName', 'QuantityOrdered',
                          'UnitPricePaid', 'TotalPricePaid', 'SupplierID', 'SupplierName',
-                         'OrderMethod', 'Status', 'Notes']
+                         'OrderMethod', 'Status', 'QuantityReceived', 'DateReceived', 'Notes']
 
 def get_int_val(val_str, default=0):
     try: return int(float(str(val_str))) if pd.notna(val_str) and str(val_str).strip() != '' else default
@@ -710,11 +710,373 @@ class ProcurementAppGUI(QMainWindow):
         self.order_process_log = QTextEdit(); self.order_process_log.setReadOnly(True); self.order_process_log.setFixedHeight(150)
         gen_ord_layout.addWidget(QLabel("Processing Log:")); gen_ord_layout.addWidget(self.order_process_log)
         
-        self.order_checkin_tab = QWidget(); self.main_tabs.addTab(self.order_checkin_tab, "Order Check-In (TBD)")
-        self.order_checkin_tab.setLayout(QVBoxLayout()); self.order_checkin_tab.layout().addWidget(QLabel("Order check-in functionality will be integrated here."))
+        # Order Check-In Tab
+        self.order_checkin_tab = QWidget()
+        checkin_layout = QVBoxLayout(self.order_checkin_tab)
+
+        # Filter/Load Section
+        filter_load_layout = QHBoxLayout()
+        self.checkin_filter_label = QLabel("Filter by OrderID:")
+        filter_load_layout.addWidget(self.checkin_filter_label)
+        self.checkin_filter_edit = QLineEdit()
+        self.checkin_filter_edit.setPlaceholderText("Enter OrderID to filter...")
+        filter_load_layout.addWidget(self.checkin_filter_edit)
+        self.checkin_load_button = QPushButton("Refresh / Load Orders")
+        self.checkin_load_button.clicked.connect(self.load_checkable_orders) # Connect button
+        filter_load_layout.addWidget(self.checkin_load_button)
+        filter_load_layout.addStretch()
+        checkin_layout.addLayout(filter_load_layout)
+
+        # Orders Table Section
+        self.checkin_orders_table = QTableWidget()
+        self.checkin_orders_table_cols = ['Select', 'OrderID', 'MaterialID', 'MaterialName', 'QuantityOrdered', 'QuantityReceived', 'SupplierName', 'Status', 'OriginalIndex']
+        self.checkin_orders_table.setColumnCount(len(self.checkin_orders_table_cols))
+        self.checkin_orders_table.setHorizontalHeaderLabels(self.checkin_orders_table_cols)
+        self.checkin_orders_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.checkin_orders_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        # self.checkin_orders_table.itemSelectionChanged.connect(self.update_checkin_action_inputs_state) # Placeholder
+        checkin_layout.addWidget(self.checkin_orders_table)
+
+        # Action Inputs Section
+        actions_form_layout = QFormLayout()
+        self.checkin_qty_received_label = QLabel("Quantity Received:")
+        self.checkin_qty_received_edit = QLineEdit()
+        int_validator = QIntValidator()
+        int_validator.setBottom(1) # Quantity must be positive
+        self.checkin_qty_received_edit.setValidator(int_validator)
+        actions_form_layout.addRow(self.checkin_qty_received_label, self.checkin_qty_received_edit)
+
+        self.checkin_notes_label = QLabel("Notes (for issues/receiving):")
+        self.checkin_notes_edit = QTextEdit()
+        self.checkin_notes_edit.setFixedHeight(80)
+        actions_form_layout.addRow(self.checkin_notes_label, self.checkin_notes_edit)
+        checkin_layout.addLayout(actions_form_layout)
+
+        # Action Buttons Section
+        action_buttons_layout = QHBoxLayout()
+        self.checkin_receive_full_button = QPushButton("Receive Selected as Full")
+        self.checkin_receive_full_button.clicked.connect(self.receive_full_action) # Connect button
+        action_buttons_layout.addWidget(self.checkin_receive_full_button)
+
+        self.checkin_receive_partial_button = QPushButton("Receive Selected as Partial")
+        self.checkin_receive_partial_button.clicked.connect(self.receive_partial_action) # Connect button
+        action_buttons_layout.addWidget(self.checkin_receive_partial_button)
+
+        self.checkin_flag_issue_button = QPushButton("Flag Issue with Selected")
+        self.checkin_flag_issue_button.clicked.connect(self.flag_issue_action) # Connect button
+        action_buttons_layout.addWidget(self.checkin_flag_issue_button)
+        action_buttons_layout.addStretch()
+        checkin_layout.addLayout(action_buttons_layout)
+
+        self.update_checkin_action_buttons_state() # Set initial state
+
+        # Log Area
+        checkin_layout.addWidget(QLabel("Check-In Log:"))
+        self.checkin_log_area = QTextEdit()
+        self.checkin_log_area.setReadOnly(True)
+        self.checkin_log_area.setFixedHeight(100)
+        checkin_layout.addWidget(self.checkin_log_area)
+
+        self.main_tabs.addTab(self.order_checkin_tab, "Order Check-In")
         
         self.data_management_widget.populate_preferred_supplier_dropdown()
         self.data_management_widget.refresh_materials_table(); self.data_management_widget.refresh_suppliers_table()
+        self.load_checkable_orders() # Initial load
+
+    def flag_issue_action(self):
+        self.checkin_log_area.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing 'Flag Issue'...")
+
+        selected_rows_indices = []
+        for r in range(self.checkin_orders_table.rowCount()):
+            checkbox = self.checkin_orders_table.cellWidget(r, self.checkin_orders_table_cols.index('Select'))
+            if checkbox and checkbox.isChecked():
+                selected_rows_indices.append(r)
+
+        if len(selected_rows_indices) != 1:
+            QMessageBox.warning(self, "Selection Error", "Please select exactly one order line to flag an issue.")
+            self.checkin_log_area.append("Error: Exactly one line must be selected to flag an issue.")
+            return
+
+        selected_row_idx = selected_rows_indices[0]
+
+        issue_notes = self.checkin_notes_edit.toPlainText().strip()
+        if not issue_notes:
+            QMessageBox.warning(self, "Input Error", "Please provide notes describing the issue in the 'Notes' field.")
+            self.checkin_log_area.append("Error: Issue notes cannot be empty when flagging an issue.")
+            return
+
+        original_idx = -1 # Initialize for error messages
+        try:
+            original_idx_item = self.checkin_orders_table.item(selected_row_idx, self.checkin_orders_table_cols.index('OriginalIndex'))
+            if original_idx_item is None or not original_idx_item.text():
+                QMessageBox.critical(self, "Error", "Could not retrieve original order index from selected row for flagging issue.")
+                self.checkin_log_area.append(f"Critical Error: Failed to retrieve OriginalIndex for flagging issue on table row {selected_row_idx}.")
+                return
+            original_idx = int(original_idx_item.text())
+
+            if original_idx not in self.order_history_df.index:
+                QMessageBox.critical(self, "Error", f"Original order index {original_idx} not found in history data for flagging issue.")
+                self.checkin_log_area.append(f"Critical Error: OriginalIndex {original_idx} no longer valid for flagging issue.")
+                return
+
+            order_id_display = self.order_history_df.loc[original_idx, 'OrderID']
+            material_name_display = self.order_history_df.loc[original_idx, 'MaterialName']
+        except (AttributeError, ValueError, KeyError) as e:
+            QMessageBox.critical(self, "Error", f"Could not retrieve order line details for flagging issue: {e}")
+            self.checkin_log_area.append(f"Critical Error: Failed to retrieve details for selected line for flagging. OriginalIndex: {original_idx}. Error: {e}")
+            return
+
+        current_notes = str(self.order_history_df.loc[original_idx, 'Notes'])
+        new_note_entry = f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M')}-ISSUE]: {issue_notes}"
+
+        self.order_history_df.loc[original_idx, 'Notes'] = (current_notes + new_note_entry).strip()
+        self.order_history_df.loc[original_idx, 'Status'] = 'Issue Reported'
+
+        self.save_any_dataframe(ORDER_HISTORY_FILE, self.order_history_df, ORDER_HISTORY_HEADERS)
+
+        self.checkin_log_area.append(f"Issue flagged for OrderID {order_id_display}, Material {material_name_display}. Notes added. Status set to 'Issue Reported'.")
+
+        self.load_checkable_orders()
+        self.checkin_notes_edit.clear()
+        self.checkin_qty_received_edit.clear() # Also clear qty field
+
+    def receive_partial_action(self):
+        self.checkin_log_area.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing 'Receive Partial'...")
+
+        selected_rows_indices = []
+        for r in range(self.checkin_orders_table.rowCount()):
+            checkbox = self.checkin_orders_table.cellWidget(r, self.checkin_orders_table_cols.index('Select'))
+            if checkbox and checkbox.isChecked():
+                selected_rows_indices.append(r)
+
+        if len(selected_rows_indices) != 1:
+            QMessageBox.warning(self, "Selection Error", "Please select exactly one order line for partial receipt.")
+            self.checkin_log_area.append("Error: Exactly one line must be selected for partial receipt.")
+            return
+
+        selected_row_idx = selected_rows_indices[0]
+
+        try:
+            qty_newly_received_str = self.checkin_qty_received_edit.text().strip()
+            if not qty_newly_received_str: # Check if empty before attempting conversion
+                QMessageBox.warning(self, "Input Error", "Quantity received cannot be empty.")
+                self.checkin_log_area.append("Error: Quantity received input is empty.")
+                return
+            qty_newly_received = int(qty_newly_received_str) # Assuming integer quantities
+            if qty_newly_received <= 0:
+                QMessageBox.warning(self, "Input Error", "Quantity received must be a positive number.")
+                self.checkin_log_area.append("Error: Quantity received must be positive.")
+                return
+        except ValueError:
+            QMessageBox.warning(self, "Input Error", "Invalid quantity received. Please enter a whole number.")
+            self.checkin_log_area.append("Error: Invalid quantity received format.")
+            return
+
+        original_idx = -1 # Initialize to ensure it's defined for error messages
+        try:
+            original_idx_item = self.checkin_orders_table.item(selected_row_idx, self.checkin_orders_table_cols.index('OriginalIndex'))
+            if original_idx_item is None or not original_idx_item.text():
+                 QMessageBox.critical(self, "Error", "Could not retrieve original order index from selected row.")
+                 self.checkin_log_area.append(f"Critical Error: Failed to retrieve OriginalIndex for selected table row {selected_row_idx}.")
+                 return
+            original_idx = int(original_idx_item.text())
+
+            if original_idx not in self.order_history_df.index:
+                QMessageBox.critical(self, "Error", f"Original order index {original_idx} not found in history data.")
+                self.checkin_log_area.append(f"Critical Error: OriginalIndex {original_idx} no longer valid.")
+                return
+            order_line = self.order_history_df.loc[original_idx].copy() # Use .copy() to avoid SettingWithCopyWarning
+        except (AttributeError, ValueError, KeyError) as e:
+            QMessageBox.critical(self, "Error", f"Could not retrieve order line details: {e}")
+            self.checkin_log_area.append(f"Critical Error: Failed to retrieve details for selected line. OriginalIndex: {original_idx}. Error: {e}")
+            return
+
+        material_id = order_line['MaterialID']
+        order_id_display = order_line['OrderID']
+        material_name_display = order_line['MaterialName']
+
+        qty_ordered_total = pd.to_numeric(order_line['QuantityOrdered'], errors='coerce').fillna(0)
+        qty_already_received = pd.to_numeric(order_line.get('QuantityReceived', 0), errors='coerce').fillna(0)
+
+        outstanding_qty = qty_ordered_total - qty_already_received
+
+        if qty_newly_received > outstanding_qty:
+            QMessageBox.warning(self, "Input Error", f"Quantity received ({qty_newly_received}) cannot exceed outstanding quantity ({outstanding_qty:.0f}).") # Format outstanding_qty
+            self.checkin_log_area.append(f"Error: Received quantity {qty_newly_received} exceeds outstanding {outstanding_qty:.0f} for OrderID {order_id_display}, Material {material_name_display}.")
+            return
+
+        # Update self.order_history_df
+        total_received_for_line = qty_already_received + qty_newly_received
+        self.order_history_df.loc[original_idx, 'QuantityReceived'] = total_received_for_line
+        self.order_history_df.loc[original_idx, 'DateReceived'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        if total_received_for_line >= qty_ordered_total:
+            self.order_history_df.loc[original_idx, 'Status'] = 'Received'
+        else:
+            self.order_history_df.loc[original_idx, 'Status'] = 'Partially Received'
+
+        # Update self.materials_df
+        material_rows = self.materials_df[self.materials_df['MaterialID'] == material_id]
+        if not material_rows.empty:
+            mat_idx = material_rows.index[0]
+            current_stock = pd.to_numeric(self.materials_df.loc[mat_idx, 'CurrentStock'], errors='coerce').fillna(0)
+            self.materials_df.loc[mat_idx, 'CurrentStock'] = current_stock + qty_newly_received
+        else:
+            self.checkin_log_area.append(f"Warning: MaterialID {material_id} not found in master for OrderID {order_id_display} during partial receipt stock update.")
+
+        # Save DataFrames and Refresh
+        self.save_any_dataframe(ORDER_HISTORY_FILE, self.order_history_df, ORDER_HISTORY_HEADERS)
+        self.save_any_dataframe(MATERIALS_FILE, self.materials_df, MATERIALS_HEADERS)
+
+        self.checkin_log_area.append(f"Partially received {qty_newly_received} for OrderID {order_id_display}, Material {material_name_display}. New total received: {total_received_for_line}. Data saved.")
+
+        self.load_checkable_orders()
+        if hasattr(self, 'data_management_widget'):
+            self.data_management_widget.refresh_materials_table()
+
+        self.checkin_qty_received_edit.clear()
+        self.checkin_notes_edit.clear() # Also clear notes after processing
+
+    def receive_full_action(self):
+        self.checkin_log_area.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing 'Receive Full'...")
+        processed_count = 0
+        selected_rows_data = []
+
+        for r in range(self.checkin_orders_table.rowCount()):
+            checkbox = self.checkin_orders_table.cellWidget(r, self.checkin_orders_table_cols.index('Select'))
+            if checkbox and checkbox.isChecked():
+                try:
+                    original_idx_item = self.checkin_orders_table.item(r, self.checkin_orders_table_cols.index('OriginalIndex'))
+                    if original_idx_item is None or not original_idx_item.text():
+                        self.checkin_log_area.append(f"  Skipping row {r} due to missing OriginalIndex.")
+                        continue
+                    original_idx = int(original_idx_item.text())
+
+                    # Retrieve data directly from order_history_df
+                    if original_idx not in self.order_history_df.index:
+                        self.checkin_log_area.append(f"  Skipping row {r}: OriginalIndex {original_idx} not found in order_history_df.")
+                        continue
+
+                    order_line = self.order_history_df.loc[original_idx]
+                    material_id = order_line['MaterialID']
+                    qty_ordered = pd.to_numeric(order_line['QuantityOrdered'], errors='coerce')
+                    if pd.isna(qty_ordered):
+                        self.checkin_log_area.append(f"  Skipping row {r} (OrderID: {order_line['OrderID']}, Material: {order_line['MaterialName']}): Invalid QuantityOrdered.")
+                        continue
+
+                    selected_rows_data.append({
+                        'original_idx': original_idx,
+                        'material_id': material_id,
+                        'qty_ordered': qty_ordered,
+                        'order_id': order_line['OrderID'],
+                        'material_name': order_line['MaterialName']
+                    })
+                except ValueError:
+                    self.checkin_log_area.append(f"  Skipping row {r} due to invalid numeric data for OriginalIndex or QuantityOrdered.")
+                    continue
+                except Exception as e:
+                    self.checkin_log_area.append(f"  Error processing selection for row {r}: {e}")
+                    continue
+
+        if not selected_rows_data:
+            self.checkin_log_area.append("No items selected for full receipt.")
+            return
+
+        for item_data in selected_rows_data:
+            original_idx = item_data['original_idx']
+            material_id = item_data['material_id']
+            qty_ordered = item_data['qty_ordered'] # Already numeric
+
+            try:
+                self.order_history_df.loc[original_idx, 'Status'] = 'Received'
+                self.order_history_df.loc[original_idx, 'QuantityReceived'] = qty_ordered # Already numeric
+                self.order_history_df.loc[original_idx, 'DateReceived'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                material_rows = self.materials_df[self.materials_df['MaterialID'] == material_id]
+                if not material_rows.empty:
+                    mat_idx = material_rows.index[0]
+                    current_stock_val = self.materials_df.loc[mat_idx, 'CurrentStock']
+                    current_stock = pd.to_numeric(current_stock_val, errors='coerce').fillna(0)
+                    self.materials_df.loc[mat_idx, 'CurrentStock'] = current_stock + qty_ordered
+                else:
+                    self.checkin_log_area.append(f"Warning: MaterialID {material_id} not found in master for OrderID {item_data['order_id']}.")
+
+                processed_count += 1
+                self.checkin_log_area.append(f"  Fully received: OrderID {item_data['order_id']}, Material {item_data['material_name']}, Qty {qty_ordered}.")
+            except Exception as e:
+                self.checkin_log_area.append(f"  Error processing item OrderID {item_data['order_id']}, Material {item_data['material_name']}: {e}")
+
+
+        if processed_count > 0:
+            self.save_any_dataframe(ORDER_HISTORY_FILE, self.order_history_df, ORDER_HISTORY_HEADERS)
+            self.save_any_dataframe(MATERIALS_FILE, self.materials_df, MATERIALS_HEADERS)
+            self.checkin_log_area.append(f"Successfully processed {processed_count} lines for full receipt. Data saved.")
+            self.load_checkable_orders()
+            if hasattr(self, 'data_management_widget'):
+                self.data_management_widget.refresh_materials_table()
+        else:
+            self.checkin_log_area.append("No items were ultimately processed for full receipt.")
+
+    def load_checkable_orders(self):
+        self.checkin_log_area.clear()
+        self.checkin_log_area.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Loading checkable orders...")
+
+        if self.order_history_df is None or self.order_history_df.empty:
+            self.checkin_log_area.append("Order history is empty or not loaded.")
+            self.checkin_orders_table.setRowCount(0)
+            return
+
+        relevant_orders_df = self.order_history_df[
+            self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
+        ].copy()
+
+        filter_text = self.checkin_filter_edit.text().strip()
+        if filter_text:
+            relevant_orders_df = relevant_orders_df[relevant_orders_df['OrderID'].astype(str).str.contains(filter_text, case=False, na=False)]
+
+        self.checkin_orders_table.setRowCount(0)
+
+        # Ensure necessary columns exist in relevant_orders_df before iterating
+        # This is more of a safeguard; they should exist from ORDER_HISTORY_HEADERS
+        required_cols_for_display = ['OrderID', 'MaterialID', 'MaterialName', 'QuantityOrdered', 'QuantityReceived', 'SupplierName', 'Status']
+        for col in required_cols_for_display:
+            if col not in relevant_orders_df.columns:
+                relevant_orders_df[col] = '' # Add missing columns with default empty string
+
+        for index, order_data in relevant_orders_df.iterrows():
+            r = self.checkin_orders_table.rowCount()
+            self.checkin_orders_table.insertRow(r)
+
+            # Select CheckBox
+            chkbox = QCheckBox()
+            chkbox.stateChanged.connect(self.update_checkin_action_buttons_state) # Connect state change
+            self.checkin_orders_table.setCellWidget(r, self.checkin_orders_table_cols.index('Select'), chkbox)
+
+            # Populate cells
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('OrderID'), QTableWidgetItem(str(order_data.get('OrderID', ''))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('MaterialID'), QTableWidgetItem(str(order_data.get('MaterialID', ''))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('MaterialName'), QTableWidgetItem(str(order_data.get('MaterialName', ''))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('QuantityOrdered'), QTableWidgetItem(str(order_data.get('QuantityOrdered', '0'))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('QuantityReceived'), QTableWidgetItem(str(order_data.get('QuantityReceived', '0'))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('SupplierName'), QTableWidgetItem(str(order_data.get('SupplierName', ''))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('Status'), QTableWidgetItem(str(order_data.get('Status', ''))))
+            self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('OriginalIndex'), QTableWidgetItem(str(index)))
+
+        self.checkin_orders_table.resizeColumnsToContents()
+        self.checkin_log_area.append(f"Loaded {relevant_orders_df.shape[0]} order lines.")
+        self.update_checkin_action_buttons_state() # Update button states after loading
+
+
+    def update_checkin_action_buttons_state(self):
+        selected_count = 0
+        for r in range(self.checkin_orders_table.rowCount()):
+            checkbox = self.checkin_orders_table.cellWidget(r, self.checkin_orders_table_cols.index('Select'))
+            if checkbox and checkbox.isChecked():
+                selected_count += 1
+
+        self.checkin_receive_full_button.setEnabled(selected_count > 0)
+        self.checkin_receive_partial_button.setEnabled(selected_count == 1)
+        self.checkin_flag_issue_button.setEnabled(selected_count == 1)
 
     # generate_order_id is NOT a method here, it's a module-level function now.
     # No @staticmethod needed if it's outside the class.
@@ -856,7 +1218,8 @@ class ProcurementAppGUI(QMainWindow):
                 'MaterialName': order_detail['MaterialName'], 'QuantityOrdered': order_detail['QuantityOrdered'],
                 'UnitPricePaid': order_detail['UnitPricePaid'], 'TotalPricePaid': order_detail['QuantityOrdered'] * order_detail['UnitPricePaid'],
                 'SupplierID': order_detail["SupplierID"], 'SupplierName': order_detail['SupplierName'],
-                'OrderMethod': order_detail['OrderMethod'], 'Status': 'Ordered', 'Notes': 'Processed via GUI selection.'
+                'OrderMethod': order_detail['OrderMethod'], 'Status': 'Ordered',
+                'QuantityReceived': 0, 'DateReceived': '', 'Notes': 'Processed via GUI selection.'
             }
             new_history_entries.append(history_entry)
             if order_detail['OrderMethod'] == "email":
