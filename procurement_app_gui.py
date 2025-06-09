@@ -11,6 +11,9 @@ from PyQt6.QtGui import QDesktopServices
 import os
 from datetime import datetime
 
+def generate_order_id():
+    return f"PO-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
+
 MATERIALS_FILE = "materials_master.csv"
 SUPPLIERS_FILE = "suppliers.csv"
 ORDER_HISTORY_FILE = "order_history.csv"
