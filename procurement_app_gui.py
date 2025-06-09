@@ -386,8 +386,7 @@ class ProcurementAppGUI(QMainWindow):
         if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self,"Open URL Failed",f"Could not open: {url_string}")
 
     def process_selected_orders_action(self):
-        self.order_process_log.append(f"
-{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing selected orders...")
+        self.order_process_log.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing selected orders...")
         selected_count = 0
         orders_to_log_and_action = [] 
         for r in range(self.proposed_orders_table.rowCount()):
