@@ -286,7 +286,7 @@ class ProcurementAppGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Integrated Procurement Application")
-        self.setGeometry(50, 50, 1200, 850)
+        self.setGeometry(50, 50, 1250, 850) # Adjusted width
 
         self.materials_df = load_or_create_dataframe_app(MATERIALS_FILE, MATERIALS_HEADERS, parent_widget=self, create_if_missing=True)
         self.suppliers_df = load_or_create_dataframe_app(SUPPLIERS_FILE, SUPPLIERS_HEADERS, parent_widget=self, create_if_missing=True)
@@ -296,25 +296,132 @@ class ProcurementAppGUI(QMainWindow):
         self.data_management_widget = DataManagementWidget(self.materials_df,self.suppliers_df,self.save_any_dataframe,self.refresh_preferred_supplier_dropdown_in_materials_tab)
         self.main_tabs.addTab(self.data_management_widget, "Data Management Hub")
         
+        # --- Generate Orders Tab UI ---
         self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders")
         gen_ord_layout = QVBoxLayout(self.generate_orders_tab)
-        self.run_order_check_button = QPushButton("Check Stock & Prepare Draft Orders")
+        
+        gen_ord_top_btn_layout = QHBoxLayout()
+        self.run_order_check_button = QPushButton("Refresh / Prepare Draft Orders")
         self.run_order_check_button.clicked.connect(self.prepare_orders_action)
-        gen_ord_layout.addWidget(self.run_order_check_button)
+        gen_ord_top_btn_layout.addWidget(self.run_order_check_button)
+        self.process_selected_orders_button = QPushButton("Process Selected Orders")
+        self.process_selected_orders_button.clicked.connect(self.process_selected_orders_action) 
+        self.process_selected_orders_button.setEnabled(False) 
+        gen_ord_top_btn_layout.addWidget(self.process_selected_orders_button)
+        gen_ord_top_btn_layout.addStretch()
+        gen_ord_layout.addLayout(gen_ord_top_btn_layout)
+        
         self.proposed_orders_table = QTableWidget()
-        self.proposed_orders_cols = ["SupplierName", "SupplierID", "MaterialID", "MaterialName", "OrderQty", "Unit Price", "Total Price", "OrderMethod", "ActionDetails"]
+        self.proposed_orders_cols = ["Select", "SupplierName", "SupplierID", "MaterialID", "MaterialName", 
+                                     "OrderQty", "Unit Price", "Total Price", "OrderMethod", "ActionDetails", "Open Link"]
         self.proposed_orders_table.setColumnCount(len(self.proposed_orders_cols)) 
         self.proposed_orders_table.setHorizontalHeaderLabels(self.proposed_orders_cols)
         self.proposed_orders_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         gen_ord_layout.addWidget(self.proposed_orders_table)
+        
         self.order_process_log = QTextEdit(); self.order_process_log.setReadOnly(True); self.order_process_log.setFixedHeight(150)
         gen_ord_layout.addWidget(QLabel("Processing Log:")); gen_ord_layout.addWidget(self.order_process_log)
         
         self.order_checkin_tab = QWidget(); self.main_tabs.addTab(self.order_checkin_tab, "Order Check-In (TBD)")
-        self.order_checkin_tab.setLayout(QVBoxLayout()); self.order_checkin_tab.layout().addWidget(QLabel("Order check-in functionality will be integrated here."))
+        self.order_checkin_tab.setLayout(QVBoxLayout()); self.order_checkin_tab.layout().addWidget(QLabel("Order check-in functionality here."))
         
         self.data_management_widget.populate_preferred_supplier_dropdown()
         self.data_management_widget.refresh_materials_table(); self.data_management_widget.refresh_suppliers_table()
+
+    def save_any_dataframe(self, file_path, df, headers_order): # Unchanged
+        try:
+            df_to_save = df.copy(); [df_to_save.pop(c) for c in df_to_save.columns if c not in headers_order]; # remove extra cols before ensuring all needed are there
+            for header in headers_order:
+                 if header not in df_to_save.columns: df_to_save[header] = ''
+            df_to_save[headers_order].to_csv(file_path, index=False)
+            QMessageBox.information(self, "Success", f"Data saved to {file_path}")
+            if file_path == SUPPLIERS_FILE: 
+                self.suppliers_df = df.copy(); self.data_management_widget.suppliers_df = self.suppliers_df 
+                self.refresh_preferred_supplier_dropdown_in_materials_tab()
+            elif file_path == MATERIALS_FILE: 
+                self.materials_df = df.copy(); self.data_management_widget.materials_df = self.materials_df
+            elif file_path == ORDER_HISTORY_FILE: self.order_history_df = df.copy() 
+        except Exception as e: QMessageBox.critical(self, "Save Error", f"Error saving to {file_path} (App): {e}")
+
+    def refresh_preferred_supplier_dropdown_in_materials_tab(self): # Unchanged
+        if hasattr(self, 'data_management_widget'): self.data_management_widget.populate_preferred_supplier_dropdown()
+
+    def prepare_orders_action(self): # MODIFIED to add CheckBox and OpenLink button
+        self.order_process_log.clear(); self.proposed_orders_table.setRowCount(0)
+        self.order_process_log.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Starting order prep...")
+        current_materials_df = self.materials_df; current_suppliers_df = self.suppliers_df
+        if current_materials_df.empty: self.order_process_log.append("Error: Materials empty."); return
+        items_to_order_by_supplier_id = {} 
+        for _, mat_row in current_materials_df.iterrows():
+            try:
+                mat_id = str(mat_row.get('MaterialID','')).strip(); mat_name = str(mat_row.get('MaterialName','U')).strip()
+                stock = get_float_val(str(mat_row.get('CurrentStock','0')),0.0); rop = get_float_val(str(mat_row.get('ReorderPoint','inf')),float('inf'))
+                if stock < rop:
+                    pref_sup_id=str(mat_row.get('PreferredSupplierID','')).strip(); order_qty=get_float_val(str(mat_row.get('StandardOrderQuantity','0')),0.0)
+                    price=get_float_val(str(mat_row.get('CurrentPrice','0')),0.0); url=str(mat_row.get('ProductPageURL','')).strip()
+                    if not pref_sup_id or order_qty <= 0: self.order_process_log.append(f"  Skip {mat_name}: No SupID or 0 Qty."); continue
+                    items_to_order_by_supplier_id.setdefault(pref_sup_id,[]).append({'MaterialID':mat_id,'MaterialName':mat_name,'QuantityOrdered':order_qty,'UnitPricePaid':price,'ProductPageURL':url})
+            except Exception as e: self.order_process_log.append(f"  Error processing {mat_row.get('MaterialID','Unknown')}: {e}")
+        if not items_to_order_by_supplier_id: self.order_process_log.append("No items to reorder."); return
+        self.order_process_log.append("Populating proposed orders table..."); self.proposed_orders_table.setRowCount(0)
+        for sup_id, items in items_to_order_by_supplier_id.items():
+            sup_info_rows=current_suppliers_df[current_suppliers_df['SupplierID']==sup_id]
+            if sup_info_rows.empty: self.order_process_log.append(f"  WARN: SupID '{sup_id}' not found for items: {[i['MaterialName'] for i in items]}."); continue
+            sup_info=sup_info_rows.iloc[0]; sup_name=str(sup_info.get('SupplierName',sup_id)); method=str(sup_info.get('OrderMethod','N/A')).lower().strip()
+            for item_dict in items:
+                r=self.proposed_orders_table.rowCount(); self.proposed_orders_table.insertRow(r)
+                col_idx_select = self.proposed_orders_cols.index("Select"); chkbox = QCheckBox(); self.proposed_orders_table.setCellWidget(r, col_idx_select, chkbox)
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("SupplierName"),QTableWidgetItem(sup_name))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("SupplierID"),QTableWidgetItem(sup_id))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("MaterialID"),QTableWidgetItem(item_dict['MaterialID']))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("MaterialName"),QTableWidgetItem(item_dict['MaterialName']))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("OrderQty"),QTableWidgetItem(str(item_dict['QuantityOrdered'])))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("Unit Price"),QTableWidgetItem(f"{item_dict['UnitPricePaid']:.2f}"))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("Total Price"),QTableWidgetItem(f"{(item_dict['QuantityOrdered']*item_dict['UnitPricePaid']):.2f}"))
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("OrderMethod"),QTableWidgetItem(method))
+                action_str=""; url_btn_visible=False; url_to_open = ""
+                if method=="email": action_str=f"Email: {sup_info.get('Email','N/A')}"
+                elif method=="online": 
+                    item_url=item_dict['ProductPageURL']; sup_web=sup_info.get('SupplierWebsite','N/A'); url_to_open=item_url if item_url else sup_web
+                    action_str=f"Online order at: {url_to_open if url_to_open else 'N/A'}"; url_btn_visible=bool(url_to_open)
+                elif method=="phone": action_str=f"Phone: {sup_info.get('Phone','N/A')}"
+                else: action_str="Manual Review"
+                self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("ActionDetails"),QTableWidgetItem(action_str))
+                if url_btn_visible:
+                    btn=QPushButton("Open"); btn.clicked.connect(lambda chk=False, u=url_to_open: self.open_url_action(u))
+                    self.proposed_orders_table.setCellWidget(r,self.proposed_orders_cols.index("Open Link"),btn)
+                else: self.proposed_orders_table.setItem(r,self.proposed_orders_cols.index("Open Link"),QTableWidgetItem(""))
+        self.proposed_orders_table.resizeColumnsToContents(); self.order_process_log.append("Order prep complete.")
+        self.process_selected_orders_button.setEnabled(True if self.proposed_orders_table.rowCount() > 0 else False)
+
+    def open_url_action(self, url_string): # NEW (similar to DataManagementWidget's)
+        if not url_string: QMessageBox.information(self, "No URL", "No URL available."); return
+        if not url_string.startswith(('http://','https://')): url_string='http://'+url_string
+        if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self,"Open URL Failed",f"Could not open: {url_string}")
+
+    def process_selected_orders_action(self): # Stub - to be fully implemented
+        self.order_process_log.append(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing selected orders...")
+        selected_count = 0
+        for r in range(self.proposed_orders_table.rowCount()):
+            checkbox = self.proposed_orders_table.cellWidget(r, self.proposed_orders_cols.index("Select"))
+            if checkbox and checkbox.isChecked():
+                selected_count +=1
+                # TODO: Extract data from this row (SupplierID, MaterialID, Qty, Price, Method, etc.)
+                #       Log to order_history.csv
+                #       Perform email/online/phone action (or log that user needs to)
+                sup_name = self.proposed_orders_table.item(r, self.proposed_orders_cols.index("SupplierName")).text()
+                mat_name = self.proposed_orders_table.item(r, self.proposed_orders_cols.index("MaterialName")).text()
+                self.order_process_log.append(f"  Processing (TODO): {mat_name} from {sup_name}")
+        if selected_count == 0: self.order_process_log.append("No orders were selected.")
+        else: self.order_process_log.append(f"Finished processing {selected_count} selected lines (actual actions TBD).")
+        QMessageBox.information(self,"Placeholder","Logic for 'Process Selected Orders' (emailing, logging to history) is next!")
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    main_app_window = ProcurementAppGUI()
+    main_app_window.show()
+    sys.exit(app.exec())
 
     def save_any_dataframe(self, file_path, df, headers_order):
         try:
