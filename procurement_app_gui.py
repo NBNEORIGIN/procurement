@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 import os
 from datetime import datetime
+from main import append_to_csv
 
 def generate_order_id():
     return f"PO-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
