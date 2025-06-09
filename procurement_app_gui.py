@@ -37,12 +37,65 @@ def get_float_val(val_str, default=0.0):
 def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str, parent_widget=None, create_if_missing=False):
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         try:
-            df = pd.read_csv(file_path, dtype=default_dtype).fillna('')
-            missing_cols = False; current_headers = df.columns.tolist()
+            # Load with dtype=str to handle mixed types initially, fill NaNs with empty strings.
+            df = pd.read_csv(file_path, dtype=str).fillna('')
+
+            current_headers = df.columns.tolist()
+            missing_cols_exist = False
+
+            if file_path == ORDER_HISTORY_FILE:
+                if 'QuantityReceived' not in current_headers:
+                    df['QuantityReceived'] = '0' # Default as string, will be converted by pd.to_numeric later
+                    current_headers.append('QuantityReceived')
+                    missing_cols_exist = True
+                else:
+                    # If column exists, ensure empty strings are '0' for consistency before to_numeric conversion
+                    df['QuantityReceived'] = df['QuantityReceived'].replace('', '0').fillna('0')
+
+
+                if 'DateReceived' not in current_headers:
+                    df['DateReceived'] = ''
+                    current_headers.append('DateReceived')
+                    missing_cols_exist = True
+                # else: # If column exists, fillna already handled empty strings.
+                    # df['DateReceived'] = df['DateReceived'].fillna('')
+
+
+            # Generic handling for any other missing columns
             for header in expected_headers:
-                if header not in current_headers: df[header] = ''; missing_cols = True
-            if missing_cols : QMessageBox.information(parent_widget,"File Schema Notice", f"File '{file_path}' had schema issues; attempted align.")
+                if header not in current_headers:
+                    df[header] = ''
+                    missing_cols_exist = True
+
+            if missing_cols_exist:
+                 QMessageBox.information(parent_widget,"File Schema Notice", f"File '{file_path}' had schema issues; defaults applied and aligned.")
+
+            # Ensure final DataFrame has all expected columns in the correct order and fill any remaining NaNs.
+            # This step is crucial for consistency.
+            # First, ensure all expected columns are in the df before reindexing
+            for col in expected_headers:
+                if col not in df.columns: # Should be rare if above logic is complete
+                    df[col] = ''
+                    if col == 'QuantityReceived' and file_path == ORDER_HISTORY_FILE: # Specific default again if it was somehow missed
+                        df[col] = '0'
+
+
+            # Reindex to ensure correct column order and presence of all expected columns
+            df = df.reindex(columns=expected_headers, fill_value='')
+
+            # Convert QuantityReceived to numeric, then to string for consistency if default_dtype for the file is str
+            # This is tricky because default_dtype can be a dict or str.
+            # For ORDER_HISTORY_FILE, the main load_or_create_dataframe_app call uses default_dtype=str.
+            if file_path == ORDER_HISTORY_FILE:
+                df['QuantityReceived'] = pd.to_numeric(df['QuantityReceived'], errors='coerce').fillna(0)
+                if default_dtype == str: # If the overall expectation is string columns
+                    df['QuantityReceived'] = df['QuantityReceived'].astype(str)
+                # DateReceived is already string or empty string.
+
+            # The final fillna('') might be redundant if dtype=str was used and all columns were filled,
+            # but it's a good safeguard if default_dtype was different or some operations created new NaNs.
             return df[expected_headers].fillna('')
+
         except Exception as e:
             QMessageBox.critical(parent_widget, "Load Error", f"Error loading {file_path}: {e}")
             return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')

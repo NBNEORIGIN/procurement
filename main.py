@@ -19,9 +19,25 @@ def load_csv_to_dataframe(file_path, expected_headers, create_if_missing=False):
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         try:
             df = pd.read_csv(file_path, dtype=str).fillna('')
+            current_headers = df.columns.tolist()
+
+            if file_path == ORDER_HISTORY_FILE:
+                if 'QuantityReceived' not in current_headers:
+                    df['QuantityReceived'] = '0'
+                else:
+                    df['QuantityReceived'] = df['QuantityReceived'].replace('', '0').fillna('0')
+
+                if 'DateReceived' not in current_headers:
+                    df['DateReceived'] = ''
+                # else: # fillna('') already handled existing empty strings
+                    # df['DateReceived'] = df['DateReceived'].fillna('')
+
+            # Ensure all other expected columns are present
             for header in expected_headers:
-                if header not in df.columns: df[header] = ''
-            return df[expected_headers] 
+                if header not in df.columns: # Check against df.columns as current_headers might not be updated if columns were added above
+                    df[header] = ''
+
+            return df[expected_headers] # Return with expected order and all columns present
         except Exception as e:
             print(f"Error loading {file_path}: {e}. Returning empty DF.")
             return pd.DataFrame(columns=expected_headers)
