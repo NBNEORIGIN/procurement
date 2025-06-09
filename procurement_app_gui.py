@@ -370,8 +370,7 @@ class ProcurementAppGUI(QMainWindow):
         if not items_to_order_by_supplier_id:
             self.order_process_log.append("No items require reordering."); return
 
-        self.order_process_log.append("
-Populating proposed orders table...")
+        self.order_process_log.append("Populating proposed orders table...")
         self.proposed_orders_table.setRowCount(0)
         for sup_id, items in items_to_order_by_supplier_id.items():
             sup_info_rows = self.suppliers_df[self.suppliers_df['SupplierID'] == sup_id]
