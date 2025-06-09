@@ -142,24 +142,28 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             if index != -1: self.mat_pref_sup_combo.setCurrentIndex(index)
     def refresh_materials_table(self):
         if self.materials_df is None: return
-        for header in MATERIALS_HEADERS:
-            if header not in self.materials_df.columns: self.materials_df[header] = ''
-        display_df = self.materials_df[MATERIALS_HEADERS].fillna('')
-        self.materials_table_view.setRowCount(display_df.shape[0]); self.materials_table_view.setColumnCount(len(MATERIALS_HEADERS))
-        self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS);self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        for i in range(display_df.shape[0]):
-            for j, header in enumerate(MATERIALS_HEADERS):
-                item_value = str(display_df.iloc[i].get(header, ''))
-                table_item = QTableWidgetItem(item_value)
-                if header == 'MaterialID': # Make MaterialID column non-editable
-                    table_item.setFlags(table_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.materials_table_view.setItem(i, j, table_item)
-        self.materials_table_view.resizeColumnsToContents()
-        self.materials_table_view.setEditTriggers(
-            QTableWidget.EditTrigger.DoubleClicked |
-            QTableWidget.EditTrigger.AnyKeyPressed |
-            QTableWidget.EditTrigger.EditKeyPressed
-        )
+        self.materials_table_view.blockSignals(True)
+        try:
+            for header in MATERIALS_HEADERS:
+                if header not in self.materials_df.columns: self.materials_df[header] = ''
+            display_df = self.materials_df[MATERIALS_HEADERS].fillna('')
+            self.materials_table_view.setRowCount(display_df.shape[0]); self.materials_table_view.setColumnCount(len(MATERIALS_HEADERS))
+            self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS);self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+            for i in range(display_df.shape[0]):
+                for j, header in enumerate(MATERIALS_HEADERS):
+                    item_value = str(display_df.iloc[i].get(header, ''))
+                    table_item = QTableWidgetItem(item_value)
+                    if header == 'MaterialID': # Make MaterialID column non-editable
+                        table_item.setFlags(table_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    self.materials_table_view.setItem(i, j, table_item)
+            self.materials_table_view.resizeColumnsToContents()
+            self.materials_table_view.setEditTriggers(
+                QTableWidget.EditTrigger.DoubleClicked |
+                QTableWidget.EditTrigger.AnyKeyPressed |
+                QTableWidget.EditTrigger.EditKeyPressed
+            )
+        finally:
+            self.materials_table_view.blockSignals(False)
 
     def handle_material_item_changed(self, item):
         if self._is_handling_item_change:
@@ -295,25 +299,29 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             self.refresh_materials_table(); self.clear_material_form()
     def refresh_suppliers_table(self):
         if self.suppliers_df is None: return
-        for header in SUPPLIERS_HEADERS:
-            if header not in self.suppliers_df.columns: self.suppliers_df[header] = ''
-        display_df = self.suppliers_df[SUPPLIERS_HEADERS].fillna('')
-        self.suppliers_table_view.setRowCount(display_df.shape[0]); self.suppliers_table_view.setColumnCount(len(SUPPLIERS_HEADERS))
-        self.suppliers_table_view.setHorizontalHeaderLabels(SUPPLIERS_HEADERS); self.suppliers_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        for i in range(display_df.shape[0]):
-            for j, header in enumerate(SUPPLIERS_HEADERS):
-                item_value = str(display_df.iloc[i].get(header, ''))
-                table_item = QTableWidgetItem(item_value)
-                if header == 'SupplierID': # Make SupplierID column non-editable
-                    table_item.setFlags(table_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                self.suppliers_table_view.setItem(i, j, table_item)
-        self.suppliers_table_view.resizeColumnsToContents()
-        self.suppliers_table_view.setEditTriggers(
-            QTableWidget.EditTrigger.DoubleClicked |
-            QTableWidget.EditTrigger.AnyKeyPressed |
-            QTableWidget.EditTrigger.EditKeyPressed
-        )
-        # self.parent_refresh_sup_dd_cb() # This is called by parent app after this refresh is done via parent_save_cb
+        self.suppliers_table_view.blockSignals(True)
+        try:
+            for header in SUPPLIERS_HEADERS:
+                if header not in self.suppliers_df.columns: self.suppliers_df[header] = ''
+            display_df = self.suppliers_df[SUPPLIERS_HEADERS].fillna('')
+            self.suppliers_table_view.setRowCount(display_df.shape[0]); self.suppliers_table_view.setColumnCount(len(SUPPLIERS_HEADERS))
+            self.suppliers_table_view.setHorizontalHeaderLabels(SUPPLIERS_HEADERS); self.suppliers_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+            for i in range(display_df.shape[0]):
+                for j, header in enumerate(SUPPLIERS_HEADERS):
+                    item_value = str(display_df.iloc[i].get(header, ''))
+                    table_item = QTableWidgetItem(item_value)
+                    if header == 'SupplierID': # Make SupplierID column non-editable
+                        table_item.setFlags(table_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    self.suppliers_table_view.setItem(i, j, table_item)
+            self.suppliers_table_view.resizeColumnsToContents()
+            self.suppliers_table_view.setEditTriggers(
+                QTableWidget.EditTrigger.DoubleClicked |
+                QTableWidget.EditTrigger.AnyKeyPressed |
+                QTableWidget.EditTrigger.EditKeyPressed
+            )
+            # self.parent_refresh_sup_dd_cb() # This is called by parent app after this refresh is done via parent_save_cb
+        finally:
+            self.suppliers_table_view.blockSignals(False)
 
     def handle_supplier_item_changed(self, item):
         if self._is_handling_supplier_item_change:
