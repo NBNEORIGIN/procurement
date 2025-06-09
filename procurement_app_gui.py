@@ -9,13 +9,24 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 import os
+from datetime import datetime 
+# We'll need action.py for email sending later, ensure it's importable
+# from action import generate_po_email_content, send_po_email 
+
 
 MATERIALS_FILE = "materials_master.csv"
 SUPPLIERS_FILE = "suppliers.csv"
+ORDER_HISTORY_FILE = "order_history.csv" 
+# STOCK_MOVEMENTS_FILE = "stock_movements.csv" # For Check-In tab later
+
 MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 'CurrentStock', 
                      'ReorderPoint', 'StandardOrderQuantity', 'PreferredSupplierID', 
                      'ProductPageURL', 'LeadTimeDays', 'SafetyStockQuantity', 'Notes', 'CurrentPrice']
 SUPPLIERS_HEADERS = ['SupplierID', 'SupplierName', 'ContactPerson', 'Email', 'Phone', 'Website', 'OrderMethod']
+ORDER_HISTORY_HEADERS = ['OrderID', 'Timestamp', 'MaterialID', 'MaterialName', 'QuantityOrdered', 
+                         'UnitPricePaid', 'TotalPricePaid', 'SupplierID', 'SupplierName', 
+                         'OrderMethod', 'Status', 'Notes']
+
 
 def get_int_val(val_str, default=0):
     try: return int(float(str(val_str))) if pd.notna(val_str) and str(val_str).strip() != '' else default
@@ -24,7 +35,7 @@ def get_float_val(val_str, default=0.0):
     try: return float(str(val_str)) if pd.notna(val_str) and str(val_str).strip() != '' else default
     except ValueError: return default
 
-def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str, parent_widget=None):
+def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str, parent_widget=None, create_if_missing=False):
     if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
         try:
             df = pd.read_csv(file_path, dtype=default_dtype).fillna('')
@@ -36,7 +47,7 @@ def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str,
         except Exception as e:
             QMessageBox.critical(parent_widget, "Load Error", f"Error loading {file_path}: {e}")
             return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
-    else:
+    elif create_if_missing: # Only create if flag is True and file doesn't exist or is empty
         if not os.path.exists(file_path): QMessageBox.information(parent_widget, "File Notice", f"'{file_path}' not found. Creating.")
         elif os.path.getsize(file_path) == 0: QMessageBox.information(parent_widget, "File Notice", f"'{file_path}' empty. Initializing.")
         try:
@@ -44,8 +55,11 @@ def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str,
             return df.astype(default_dtype).fillna('')
         except Exception as e: QMessageBox.critical(parent_widget, "File Creation Error", f"Could not create {file_path}: {e}")
         return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
+    else: # File not found/empty AND create_if_missing is False
+        return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
 
-class DataManagementWidget(QWidget):
+
+class DataManagementWidget(QWidget): # Same as before
     def __init__(self, materials_df_ref, suppliers_df_ref, parent_save_cb, parent_refresh_sup_dd_cb):
         super().__init__()
         self.materials_df = materials_df_ref
@@ -53,7 +67,6 @@ class DataManagementWidget(QWidget):
         self.parent_save_cb = parent_save_cb
         self.parent_refresh_sup_dd_cb = parent_refresh_sup_dd_cb
         self.init_ui()
-
     def init_ui(self):
         layout = QVBoxLayout(self); self.data_tabs = QTabWidget(); layout.addWidget(self.data_tabs)
         self.materials_tab_widget = QWidget(); self.data_tabs.addTab(self.materials_tab_widget, "Materials Master")
@@ -79,7 +92,6 @@ class DataManagementWidget(QWidget):
                              ("Delete Material", self.delete_material), ("Clear Material Form", self.clear_material_form)]:
             btn = QPushButton(text); btn.clicked.connect(method); mat_btns_layout.addWidget(btn)
         mat_layout.addLayout(mat_btns_layout)
-
         self.suppliers_tab_widget = QWidget(); self.data_tabs.addTab(self.suppliers_tab_widget, "Suppliers")
         sup_layout = QVBoxLayout(self.suppliers_tab_widget)
         self.suppliers_table_view = QTableWidget(); self.suppliers_table_view.itemSelectionChanged.connect(self.on_supplier_selected_from_table)
@@ -99,101 +111,58 @@ class DataManagementWidget(QWidget):
                              ("Delete Supplier", self.delete_supplier), ("Clear Supplier Form", self.clear_supplier_form)]:
             btn = QPushButton(text); btn.clicked.connect(method); sup_btns_layout.addWidget(btn)
         sup_layout.addLayout(sup_btns_layout)
-    
-    # All methods from DataEntryHubGUI (open_urls, populate_dropdown, refresh_tables, on_selected, clear_forms, add, save, delete)
-    # go here, largely unchanged except save_* methods call self.parent_save_cb()
-    # and save_supplier/delete_supplier call self.parent_refresh_sup_dd_cb()
-
-    def open_material_url(self): # Identical to previous
+    def open_material_url(self): # Identical
         url_string = self.mat_url_edit.text().strip()
         if not url_string: QMessageBox.information(self, "No URL", "Product Page URL field is empty."); return
         if not url_string.startswith(('http://', 'https://')): url_string = 'http://' + url_string
         if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
-
-    def open_supplier_website(self): # Identical to previous
+    def open_supplier_website(self): # Identical
         url_string = self.sup_website_edit.text().strip()
         if not url_string: QMessageBox.information(self, "No URL", "Supplier Website field is empty."); return
         if not url_string.startswith(('http://', 'https://')): url_string = 'http://' + url_string
         if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
-
     def populate_preferred_supplier_dropdown(self): # Identical
         current_selection = self.mat_pref_sup_combo.currentData() 
         self.mat_pref_sup_combo.clear(); self.mat_pref_sup_combo.addItem("", None) 
-        if not self.suppliers_df.empty and 'SupplierID' in self.suppliers_df.columns: # Uses self.suppliers_df
+        if not self.suppliers_df.empty and 'SupplierID' in self.suppliers_df.columns:
             for _, row in self.suppliers_df.iterrows():
                 sid = str(row['SupplierID']); sname = str(row['SupplierName'])
                 if sid: self.mat_pref_sup_combo.addItem(f"{sid} : {sname if sname else 'N/A'}", sid) 
         if current_selection: 
             index = self.mat_pref_sup_combo.findData(current_selection)
             if index != -1: self.mat_pref_sup_combo.setCurrentIndex(index)
-    
     def refresh_materials_table(self): # Identical
         if self.materials_df is None: return
         for header in MATERIALS_HEADERS: 
             if header not in self.materials_df.columns: self.materials_df[header] = ''
         display_df = self.materials_df[MATERIALS_HEADERS].fillna('')
         self.materials_table_view.setRowCount(display_df.shape[0]); self.materials_table_view.setColumnCount(len(MATERIALS_HEADERS))
-        self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS)
+        self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS);self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         for i in range(display_df.shape[0]):
-            for j, header in enumerate(MATERIALS_HEADERS):
-                self.materials_table_view.setItem(i, j, QTableWidgetItem(str(display_df.iloc[i].get(header, ''))))
+            for j, header in enumerate(MATERIALS_HEADERS): self.materials_table_view.setItem(i, j, QTableWidgetItem(str(display_df.iloc[i].get(header, ''))))
         self.materials_table_view.resizeColumnsToContents(); self.materials_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-
-    def on_material_selected(self): 
+    def on_material_selected(self): # Identical
         rows = self.materials_table_view.selectionModel().selectedRows()
-        if not rows: 
-            self.clear_material_form()
-            return
-        
-        selected_row_index_in_view = rows[0].row()
-        material_id_col_idx = MATERIALS_HEADERS.index('MaterialID') 
-        mat_id_item = self.materials_table_view.item(selected_row_index_in_view, material_id_col_idx)
-
-        if not mat_id_item or not mat_id_item.text(): 
-            self.clear_material_form() 
-            return 
-        
-        material_id = mat_id_item.text() # Variable `material_id` is defined
-        
-        # Use the corrected variable `material_id` here:
+        if not rows: self.clear_material_form(); return
+        idx = MATERIALS_HEADERS.index('MaterialID'); mat_id_item = self.materials_table_view.item(rows[0].row(), idx)
+        if not mat_id_item or not mat_id_item.text(): self.clear_material_form(); return; material_id = mat_id_item.text()
         data_rows = self.materials_df[self.materials_df['MaterialID'] == material_id] 
-        
-        if data_rows.empty: 
-            self.clear_material_form()
-            # Optional: QMessageBox.warning(self, "Data Sync Error", f"MaterialID '{material_id}' not found in DataFrame.")
-            return  # Explicitly return if no data found
-        
-        data = data_rows.iloc[0] # This line should now be safe
-        
-        self.mat_id_edit.setText(str(data.get('MaterialID',''))); self.mat_id_edit.setReadOnly(True)
-        self.mat_name_edit.setText(str(data.get('MaterialName','')))
+        if data_rows.empty: self.clear_material_form(); return; data = data_rows.iloc[0]
+        self.mat_id_edit.setText(str(data.get('MaterialID',''))); self.mat_id_edit.setReadOnly(True); self.mat_name_edit.setText(str(data.get('MaterialName','')))
         self.mat_cat_edit.setText(str(data.get('Category',''))); self.mat_uom_edit.setText(str(data.get('UnitOfMeasure','')))
-        
-        self.mat_stock_spin.setValue(get_int_val(data.get('CurrentStock')))
-        self.mat_rop_spin.setValue(get_int_val(data.get('ReorderPoint')))
-        self.mat_soq_spin.setValue(get_int_val(data.get('StandardOrderQuantity')))
-        self.mat_price_spin.setValue(get_float_val(data.get('CurrentPrice'))) 
-        
-        pref_sup_id_val = str(data.get('PreferredSupplierID',''))
-        found_index = self.mat_pref_sup_combo.findData(pref_sup_id_val) 
-        if found_index != -1: self.mat_pref_sup_combo.setCurrentIndex(found_index)
-        else: self.mat_pref_sup_combo.setCurrentIndex(0) 
-            
-        self.mat_url_edit.setText(str(data.get('ProductPageURL','')))
-        self.mat_lead_spin.setValue(get_int_val(data.get('LeadTimeDays')))
-        self.mat_safe_stock_spin.setValue(get_int_val(data.get('SafetyStockQuantity')))
-        self.mat_notes_edit.setText(str(data.get('Notes','')))
-
+        self.mat_stock_spin.setValue(get_int_val(data.get('CurrentStock'))); self.mat_rop_spin.setValue(get_int_val(data.get('ReorderPoint')))
+        self.mat_soq_spin.setValue(get_int_val(data.get('StandardOrderQuantity'))); self.mat_price_spin.setValue(get_float_val(data.get('CurrentPrice'))) 
+        pref_sup_id_val = str(data.get('PreferredSupplierID','')); idx = self.mat_pref_sup_combo.findData(pref_sup_id_val) 
+        self.mat_pref_sup_combo.setCurrentIndex(idx if idx != -1 else 0) 
+        self.mat_url_edit.setText(str(data.get('ProductPageURL',''))); self.mat_lead_spin.setValue(get_int_val(data.get('LeadTimeDays')))
+        self.mat_safe_stock_spin.setValue(get_int_val(data.get('SafetyStockQuantity'))); self.mat_notes_edit.setText(str(data.get('Notes','')))
     def clear_material_form(self): # Identical
         self.mat_id_edit.clear(); self.mat_id_edit.setReadOnly(False); self.mat_id_edit.setPlaceholderText("Unique ID*")
-        for editor in [self.mat_name_edit, self.mat_cat_edit, self.mat_uom_edit, self.mat_url_edit, self.mat_notes_edit]: editor.clear()
-        for spinbox in [self.mat_stock_spin,self.mat_rop_spin,self.mat_soq_spin,self.mat_lead_spin,self.mat_safe_stock_spin]: spinbox.setValue(0)
+        for e in [self.mat_name_edit,self.mat_cat_edit,self.mat_uom_edit,self.mat_url_edit,self.mat_notes_edit]: e.clear()
+        for s in [self.mat_stock_spin,self.mat_rop_spin,self.mat_soq_spin,self.mat_lead_spin,self.mat_safe_stock_spin]: s.setValue(0)
         self.mat_price_spin.setValue(0.0); self.mat_pref_sup_combo.setCurrentIndex(0); self.materials_table_view.clearSelection()
-
     def add_new_material(self): self.clear_material_form(); self.mat_id_edit.setFocus() # Identical
-
-    def save_material(self): # MODIFIED FOR CALLBACK
+    def save_material(self): # Uses parent_save_cb
         mat_id=self.mat_id_edit.text().strip(); mat_name=self.mat_name_edit.text().strip()
         if not mat_id or not mat_name: QMessageBox.warning(self,"Input Error","ID and Name required."); return
         pref_sup_id_val=self.mat_pref_sup_combo.currentData() or ""
@@ -209,8 +178,7 @@ class DataManagementWidget(QWidget):
         else: self.materials_df = pd.concat([self.materials_df, pd.DataFrame([data_dict], columns=MATERIALS_HEADERS)], ignore_index=True)
         self.parent_save_cb(MATERIALS_FILE, self.materials_df, MATERIALS_HEADERS) 
         self.refresh_materials_table(); self.clear_material_form()
-
-    def delete_material(self): # MODIFIED FOR CALLBACK
+    def delete_material(self): # Uses parent_save_cb
         rows=self.materials_table_view.selectionModel().selectedRows()
         if not rows: QMessageBox.warning(self,"Selection Error","Select material to delete."); return
         idx=MATERIALS_HEADERS.index('MaterialID'); mat_id_del=self.materials_table_view.item(rows[0].row(),idx).text()
@@ -218,21 +186,17 @@ class DataManagementWidget(QWidget):
             self.materials_df = self.materials_df[self.materials_df['MaterialID'] != mat_id_del].reset_index(drop=True)
             self.parent_save_cb(MATERIALS_FILE, self.materials_df, MATERIALS_HEADERS)
             self.refresh_materials_table(); self.clear_material_form()
-
     def refresh_suppliers_table(self): # Identical
         if self.suppliers_df is None: return
         for header in SUPPLIERS_HEADERS:
             if header not in self.suppliers_df.columns: self.suppliers_df[header] = ''
         display_df = self.suppliers_df[SUPPLIERS_HEADERS].fillna('')
         self.suppliers_table_view.setRowCount(display_df.shape[0]); self.suppliers_table_view.setColumnCount(len(SUPPLIERS_HEADERS))
-        self.suppliers_table_view.setHorizontalHeaderLabels(SUPPLIERS_HEADERS)
+        self.suppliers_table_view.setHorizontalHeaderLabels(SUPPLIERS_HEADERS); self.suppliers_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         for i in range(display_df.shape[0]):
-            for j, header in enumerate(SUPPLIERS_HEADERS):
-                self.suppliers_table_view.setItem(i, j, QTableWidgetItem(str(display_df.iloc[i].get(header, ''))))
+            for j, header in enumerate(SUPPLIERS_HEADERS): self.suppliers_table_view.setItem(i, j, QTableWidgetItem(str(display_df.iloc[i].get(header, ''))))
         self.suppliers_table_view.resizeColumnsToContents(); self.suppliers_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.suppliers_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        # self.populate_preferred_supplier_dropdown() # Called by parent app after this refresh
-
+        # self.parent_refresh_sup_dd_cb() # Parent calls this after its own suppliers_df is updated
     def on_supplier_selected_from_table(self): # Identical
         rows=self.suppliers_table_view.selectionModel().selectedRows()
         if not rows: self.clear_supplier_form(); return
@@ -240,19 +204,16 @@ class DataManagementWidget(QWidget):
         if not sup_id_item or not sup_id_item.text(): self.clear_supplier_form(); return; supplier_id=sup_id_item.text()
         data_rows=self.suppliers_df[self.suppliers_df['SupplierID']==supplier_id] 
         if data_rows.empty: self.clear_supplier_form(); return; data=data_rows.iloc[0]
-        self.sup_id_edit.setText(str(data.get('SupplierID',''))); self.sup_id_edit.setReadOnly(True)
-        self.sup_name_edit.setText(str(data.get('SupplierName',''))); self.sup_contact_edit.setText(str(data.get('ContactPerson','')))
-        self.sup_email_edit.setText(str(data.get('Email',''))); self.sup_phone_edit.setText(str(data.get('Phone','')))
-        self.sup_website_edit.setText(str(data.get('Website',''))); self.sup_order_method_combo.setCurrentText(str(data.get('OrderMethod','')))
-
+        self.sup_id_edit.setText(str(data.get('SupplierID',''))); self.sup_id_edit.setReadOnly(True); self.sup_name_edit.setText(str(data.get('SupplierName','')))
+        self.sup_contact_edit.setText(str(data.get('ContactPerson',''))); self.sup_email_edit.setText(str(data.get('Email','')))
+        self.sup_phone_edit.setText(str(data.get('Phone',''))); self.sup_website_edit.setText(str(data.get('Website','')))
+        self.sup_order_method_combo.setCurrentText(str(data.get('OrderMethod','')))
     def clear_supplier_form(self): # Identical
         self.sup_id_edit.clear(); self.sup_id_edit.setReadOnly(False); self.sup_id_edit.setPlaceholderText("Unique ID*")
-        for editor in [self.sup_name_edit,self.sup_contact_edit,self.sup_email_edit,self.sup_phone_edit,self.sup_website_edit]: editor.clear()
+        for e in [self.sup_name_edit,self.sup_contact_edit,self.sup_email_edit,self.sup_phone_edit,self.sup_website_edit]: e.clear()
         self.sup_order_method_combo.setCurrentIndex(0); self.suppliers_table_view.clearSelection()
-
     def add_new_supplier(self): self.clear_supplier_form(); self.sup_id_edit.setFocus() # Identical
-
-    def save_supplier(self): # MODIFIED FOR CALLBACK
+    def save_supplier(self): # Uses parent_save_cb and parent_refresh_sup_dd_cb
         sup_id=self.sup_id_edit.text().strip(); sup_name=self.sup_name_edit.text().strip()
         if not sup_id or not sup_name: QMessageBox.warning(self,"Input Error","SupplierID and Name required."); return
         data_dict = {h:"" for h in SUPPLIERS_HEADERS}
@@ -265,15 +226,14 @@ class DataManagementWidget(QWidget):
         self.parent_save_cb(SUPPLIERS_FILE, self.suppliers_df, SUPPLIERS_HEADERS)
         self.refresh_suppliers_table(); self.clear_supplier_form() 
         self.parent_refresh_sup_dd_cb()
-
-    def delete_supplier(self): # MODIFIED FOR CALLBACK
+    def delete_supplier(self): # Uses parent_save_cb and parent_refresh_sup_dd_cb
         rows=self.suppliers_table_view.selectionModel().selectedRows()
         if not rows: QMessageBox.warning(self,"Selection Error","Select supplier to delete."); return
         idx=SUPPLIERS_HEADERS.index('SupplierID'); sup_id_del=self.suppliers_table_view.item(rows[0].row(),idx).text()
         if not self.materials_df.empty and 'PreferredSupplierID' in self.materials_df.columns:
             if sup_id_del in self.materials_df['PreferredSupplierID'].values:
-                used_by = self.materials_df[self.materials_df['PreferredSupplierID']==sup_id_del]['MaterialID'].tolist()
-                QMessageBox.warning(self,"Deletion Error",f"Supplier '{sup_id_del}' used by materials: {', '.join(used_by)}. Update them first.")
+                used_by=self.materials_df[self.materials_df['PreferredSupplierID']==sup_id_del]['MaterialID'].tolist()
+                QMessageBox.warning(self,"Deletion Error",f"Supplier '{sup_id_del}' used by: {', '.join(used_by)}. Update materials first.")
                 return
         if QMessageBox.question(self,"Confirm",f"Delete '{sup_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
             self.suppliers_df = self.suppliers_df[self.suppliers_df['SupplierID']!=sup_id_del].reset_index(drop=True)
@@ -283,20 +243,35 @@ class DataManagementWidget(QWidget):
 
 class ProcurementAppGUI(QMainWindow):
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Integrated Procurement Application"); self.setGeometry(50,50,1200,850)
-        self.materials_df = load_or_create_dataframe_app(MATERIALS_FILE,MATERIALS_HEADERS,parent_widget=self)
-        self.suppliers_df = load_or_create_dataframe_app(SUPPLIERS_FILE,SUPPLIERS_HEADERS,parent_widget=self)
+        super().__init__(); self.setWindowTitle("Integrated Procurement Application"); self.setGeometry(50,50,1200,850)
+        self.materials_df = load_or_create_dataframe_app(MATERIALS_FILE,MATERIALS_HEADERS,parent_widget=self, create_if_missing=True)
+        self.suppliers_df = load_or_create_dataframe_app(SUPPLIERS_FILE,SUPPLIERS_HEADERS,parent_widget=self, create_if_missing=True)
+        self.order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, create_if_missing=True, parent_widget=self)
+        # self.stock_movements_df = load_or_create_dataframe_app(STOCK_MOVEMENTS_FILE, STOCK_MOVEMENTS_HEADERS, create_if_missing=True, parent_widget=self)
+
         self.main_tabs = QTabWidget(); self.setCentralWidget(self.main_tabs)
         self.data_management_widget = DataManagementWidget(self.materials_df,self.suppliers_df,self.save_any_dataframe,self.refresh_preferred_supplier_dropdown_in_materials_tab)
         self.main_tabs.addTab(self.data_management_widget, "Data Management Hub")
-        self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders (TBD)")
-        self.generate_orders_tab.setLayout(QVBoxLayout()); self.generate_orders_tab.layout().addWidget(QLabel("Order generation here."))
+        
+        # --- Generate Orders Tab UI ---
+        self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders")
+        gen_ord_layout = QVBoxLayout(self.generate_orders_tab)
+        self.run_order_check_button = QPushButton("Check Stock & Prepare Draft Orders")
+        self.run_order_check_button.clicked.connect(self.prepare_orders_action)
+        gen_ord_layout.addWidget(self.run_order_check_button)
+        self.proposed_orders_table = QTableWidget()
+        self.proposed_orders_table.setColumnCount(6) 
+        self.proposed_orders_table.setHorizontalHeaderLabels(["Supplier", "Material ID", "Material Name", "Order Qty", "Method", "Action/Details"])
+        self.proposed_orders_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        gen_ord_layout.addWidget(self.proposed_orders_table)
+        self.order_process_log = QTextEdit(); self.order_process_log.setReadOnly(True); self.order_process_log.setFixedHeight(150)
+        gen_ord_layout.addWidget(QLabel("Order Processing Log:")); gen_ord_layout.addWidget(self.order_process_log)
+        
         self.order_checkin_tab = QWidget(); self.main_tabs.addTab(self.order_checkin_tab, "Order Check-In (TBD)")
         self.order_checkin_tab.setLayout(QVBoxLayout()); self.order_checkin_tab.layout().addWidget(QLabel("Order check-in here."))
+        
         self.data_management_widget.populate_preferred_supplier_dropdown()
-        self.data_management_widget.refresh_materials_table()
-        self.data_management_widget.refresh_suppliers_table()
+        self.data_management_widget.refresh_materials_table(); self.data_management_widget.refresh_suppliers_table()
 
     def save_any_dataframe(self, file_path, df, headers_order):
         try:
@@ -305,18 +280,29 @@ class ProcurementAppGUI(QMainWindow):
                  if header not in df_to_save.columns: df_to_save[header] = ''
             df_to_save[headers_order].to_csv(file_path, index=False)
             QMessageBox.information(self, "Success", f"Data saved to {file_path}")
-            if file_path == SUPPLIERS_FILE: # If suppliers changed, update main app's copy and tell child
-                self.suppliers_df = load_or_create_dataframe_app(SUPPLIERS_FILE, SUPPLIERS_HEADERS, parent_widget=self)
-                self.data_management_widget.suppliers_df = self.suppliers_df 
-                # Child widget's refresh_suppliers_table will call populate_preferred_supplier_dropdown
-            elif file_path == MATERIALS_FILE: # If materials changed, update main app's copy
-                self.materials_df = load_or_create_dataframe_app(MATERIALS_FILE, MATERIALS_HEADERS, parent_widget=self)
+            if file_path == SUPPLIERS_FILE: 
+                self.suppliers_df = df.copy() # Update main app's DataFrame
+                self.data_management_widget.suppliers_df = self.suppliers_df # Ensure child has the latest
+                self.refresh_preferred_supplier_dropdown_in_materials_tab()
+            elif file_path == MATERIALS_FILE: 
+                self.materials_df = df.copy() # Update main app's DataFrame
                 self.data_management_widget.materials_df = self.materials_df
         except Exception as e: QMessageBox.critical(self, "Save Error", f"Error saving to {file_path} (App): {e}")
 
     def refresh_preferred_supplier_dropdown_in_materials_tab(self):
-        if hasattr(self, 'data_management_widget'):
-            self.data_management_widget.populate_preferred_supplier_dropdown()
+        if hasattr(self, 'data_management_widget'): self.data_management_widget.populate_preferred_supplier_dropdown()
+
+    def prepare_orders_action(self): # Placeholder - to be filled with main.py logic
+        self.order_process_log.clear(); self.order_process_log.append("Starting order preparation process...")
+        # TODO: Integrate main.py logic here
+        # 1. Refresh data from self.materials_df, self.suppliers_df
+        # 2. Determine items to order
+        # 3. Populate self.proposed_orders_table
+        # 4. Add buttons to table rows for "Send Email" or "View Online Order Details"
+        # 5. Log to self.order_history_df and save via self.save_any_dataframe
+        self.order_process_log.append("Order generation logic not yet fully implemented in GUI.")
+        QMessageBox.information(self, "Placeholder", "Order generation logic to be added here.")
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
