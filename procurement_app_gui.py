@@ -120,6 +120,20 @@ def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str,
     else:
         return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
 
+class DataManagementWidget(QWidget):
+    def __init__(self, materials_df, suppliers_df, save_any_dataframe, refresh_preferred_supplier_dropdown_in_materials_tab, parent=None):
+        super().__init__(parent)
+        self.materials_df = materials_df
+        self.suppliers_df = suppliers_df
+        self.save_any_dataframe = save_any_dataframe
+        self.refresh_preferred_supplier_dropdown_in_materials_tab = refresh_preferred_supplier_dropdown_in_materials_tab
+
+        # Basic layout
+        layout = QVBoxLayout(self)
+        welcome_label = QLabel("Data Management Widget Initialized")
+        layout.addWidget(welcome_label)
+        self.setLayout(layout)
+
 # ... (The rest of the DataManagementWidget and other parts of the file would continue here)
 # ... I will truncate for brevity in this example, but the full file would be included.
 
