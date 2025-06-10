@@ -68,7 +68,14 @@ def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str,
                     missing_cols_exist = True
 
             if missing_cols_exist:
-                 QMessageBox.information(parent_widget,"File Schema Notice", f"File '{file_path}' had schema issues; defaults applied and aligned.")
+                 timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                 log_entry = f"[{timestamp_str}] TITLE: File Schema Notice MESSAGE: File '{file_path}' had schema issues; defaults applied and aligned."
+                 try:
+                     with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                         f_popup_log.write(log_entry + "\n")
+                 except Exception as e_popup:
+                     print(f"Failed to write to popup_messages.txt: {e_popup}")
+                 # QMessageBox.information(parent_widget,"File Schema Notice", f"File '{file_path}' had schema issues; defaults applied and aligned.")
 
             # Ensure final DataFrame has all expected columns in the correct order and fill any remaining NaNs.
             # This step is crucial for consistency.
@@ -97,15 +104,46 @@ def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str,
             return df[expected_headers].fillna('')
 
         except Exception as e:
-            QMessageBox.critical(parent_widget, "Load Error", f"Error loading {file_path}: {e}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Load Error MESSAGE: Error loading {file_path}: {e}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(parent_widget, "Load Error", f"Error loading {file_path}: {e}")
             return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
     elif create_if_missing:
-        if not os.path.exists(file_path): QMessageBox.information(parent_widget, "File Notice", f"'{file_path}' not found. Creating.")
-        elif os.path.getsize(file_path) == 0: QMessageBox.information(parent_widget, "File Notice", f"'{file_path}' empty. Initializing.")
+        if not os.path.exists(file_path):
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: File Notice MESSAGE: '{file_path}' not found. Creating."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(parent_widget, "File Notice", f"'{file_path}' not found. Creating.")
+        elif os.path.getsize(file_path) == 0:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: File Notice MESSAGE: '{file_path}' empty. Initializing."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(parent_widget, "File Notice", f"'{file_path}' empty. Initializing.")
         try:
             df = pd.DataFrame(columns=expected_headers); df.to_csv(file_path, index=False)
             return df.astype(default_dtype).fillna('')
-        except Exception as e: QMessageBox.critical(parent_widget, "File Creation Error", f"Could not create {file_path}: {e}")
+        except Exception as e:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: File Creation Error MESSAGE: Could not create {file_path}: {e}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(parent_widget, "File Creation Error", f"Could not create {file_path}: {e}")
         return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
     else:
         return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
@@ -175,14 +213,48 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
         sup_layout.addLayout(sup_btns_layout)
     def open_material_url(self):
         url_string = self.mat_url_edit.text().strip()
-        if not url_string: QMessageBox.information(self, "No URL", "Product Page URL field is empty."); return
+        if not url_string:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: No URL MESSAGE: Product Page URL field is empty."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "No URL", "Product Page URL field is empty.")
+            return
         if not url_string.startswith(('http://', 'https://')): url_string = 'http://' + url_string
-        if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
+        if not QDesktopServices.openUrl(QUrl(url_string)):
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Open URL Failed MESSAGE: Could not open URL: {url_string}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
     def open_supplier_website(self):
         url_string = self.sup_website_edit.text().strip()
-        if not url_string: QMessageBox.information(self, "No URL", "Supplier Website field is empty."); return
+        if not url_string:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: No URL MESSAGE: Supplier Website field is empty."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "No URL", "Supplier Website field is empty.")
+            return
         if not url_string.startswith(('http://', 'https://')): url_string = 'http://' + url_string
-        if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
+        if not QDesktopServices.openUrl(QUrl(url_string)):
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Open URL Failed MESSAGE: Could not open URL: {url_string}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Open URL Failed", f"Could not open URL: {url_string}")
     def populate_preferred_supplier_dropdown(self):
         current_selection = self.mat_pref_sup_combo.currentData()
         self.mat_pref_sup_combo.clear(); self.mat_pref_sup_combo.addItem("", None)
@@ -238,7 +310,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
 
             if header_name == 'MaterialID' and new_value != material_id:
                 # This case should ideally be prevented by setFlags, but as a fallback:
-                QMessageBox.warning(self, "Edit Error", "MaterialID cannot be changed directly in the table.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Edit Error MESSAGE: MaterialID cannot be changed directly in the table."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.warning(self, "Edit Error", "MaterialID cannot be changed directly in the table.")
                 # Revert the change in the GUI if possible, though setFlags should prevent this.
                 # For simplicity, we assume setFlags works and this is a rare fallback.
                 # item.setText(material_id) # This might trigger itemChanged again if not careful
@@ -248,7 +327,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             # Find the index in the DataFrame
             df_idx = self.materials_df.index[self.materials_df['MaterialID'] == material_id].tolist()
             if not df_idx:
-                QMessageBox.critical(self, "Update Error", f"Could not find MaterialID '{material_id}' in the DataFrame to update.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Update Error MESSAGE: Could not find MaterialID '{material_id}' in the DataFrame to update."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.critical(self, "Update Error", f"Could not find MaterialID '{material_id}' in the DataFrame to update.")
                 self._is_handling_item_change = False
                 return # MaterialID not found, something is wrong
 
@@ -269,7 +355,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             # (e.g. self.materials_df = updated_df_from_parent_app), that's fine.
 
         except Exception as e:
-            QMessageBox.critical(self, "Update Error", f"Error updating material item: {e}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Update Error MESSAGE: Error updating material item: {e}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(self, "Update Error", f"Error updating material item: {e}")
         finally:
             self._is_handling_item_change = False
 
@@ -297,7 +390,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
 
         if data_rows.empty:
             self.clear_material_form()
-            # Optional: QMessageBox.warning(self, "Data Sync Error", f"MaterialID '{material_id}' not found in DataFrame.")
+            # timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            # log_entry = f"[{timestamp_str}] TITLE: Data Sync Error MESSAGE: MaterialID '{material_id}' not found in DataFrame."
+            # try:
+            #     with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+            #         f_popup_log.write(log_entry + "\n")
+            # except Exception as e_popup:
+            #     print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # # Optional: QMessageBox.warning(self, "Data Sync Error", f"MaterialID '{material_id}' not found in DataFrame.")
             return  # Explicitly return if no data found
 
         data = data_rows.iloc[0] # This line should now be safe
@@ -328,7 +428,16 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
     def add_new_material(self): self.clear_material_form(); self.mat_id_edit.setFocus()
     def save_material(self):
         mat_id=self.mat_id_edit.text().strip(); mat_name=self.mat_name_edit.text().strip()
-        if not mat_id or not mat_name: QMessageBox.warning(self,"Input Error","ID and Name required."); return
+        if not mat_id or not mat_name:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: ID and Name required."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self,"Input Error","ID and Name required.")
+            return
         pref_sup_id_val=self.mat_pref_sup_combo.currentData() or ""
         data_dict = {h:"" for h in MATERIALS_HEADERS}
         data_dict.update({'MaterialID':mat_id, 'MaterialName':mat_name, 'Category':self.mat_cat_edit.text().strip(),
@@ -344,9 +453,28 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
         self.refresh_materials_table(); self.clear_material_form()
     def delete_material(self):
         rows=self.materials_table_view.selectionModel().selectedRows()
-        if not rows: QMessageBox.warning(self,"Selection Error","Select material to delete."); return
+        if not rows:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Selection Error MESSAGE: Select material to delete."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self,"Selection Error","Select material to delete.")
+            return
         idx=MATERIALS_HEADERS.index('MaterialID'); mat_id_del=self.materials_table_view.item(rows[0].row(),idx).text()
-        if QMessageBox.question(self,"Confirm",f"Delete '{mat_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
+        timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+        # For QMessageBox.question, we log the question and assume Yes for non-interactive flow.
+        # The original call is: QMessageBox.question(self,"Confirm",f"Delete '{mat_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)
+        log_entry = f"[{timestamp_str}] TITLE: Confirm MESSAGE: Delete '{mat_id_del}'? (Auto-assuming Yes)"
+        try:
+            with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                f_popup_log.write(log_entry + "\n")
+        except Exception as e_popup:
+            print(f"Failed to write to popup_messages.txt: {e_popup}")
+        # if QMessageBox.question(self,"Confirm",f"Delete '{mat_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
+        if True: # Assuming 'Yes' for non-interactive script
             self.materials_df = self.materials_df[self.materials_df['MaterialID'] != mat_id_del].reset_index(drop=True)
             self.parent_save_cb(MATERIALS_FILE, self.materials_df, MATERIALS_HEADERS)
             self.refresh_materials_table(); self.clear_material_form()
@@ -395,14 +523,28 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             supplier_id = supplier_id_item.text()
 
             if header_name == 'SupplierID' and new_value != supplier_id:
-                QMessageBox.warning(self, "Edit Error", "SupplierID cannot be changed directly in the table.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Edit Error MESSAGE: SupplierID cannot be changed directly in the table."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.warning(self, "Edit Error", "SupplierID cannot be changed directly in the table.")
                 # item.setText(supplier_id) # Revert, but setFlags should prevent this
                 self._is_handling_supplier_item_change = False
                 return
 
             df_idx = self.suppliers_df.index[self.suppliers_df['SupplierID'] == supplier_id].tolist()
             if not df_idx:
-                QMessageBox.critical(self, "Update Error", f"Could not find SupplierID '{supplier_id}' in DataFrame.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Update Error MESSAGE: Could not find SupplierID '{supplier_id}' in DataFrame."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.critical(self, "Update Error", f"Could not find SupplierID '{supplier_id}' in DataFrame.")
                 self._is_handling_supplier_item_change = False
                 return
 
@@ -411,7 +553,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             # The parent_save_cb for suppliers already calls refresh for dropdowns in ProcurementAppGUI
 
         except Exception as e:
-            QMessageBox.critical(self, "Update Error", f"Error updating supplier item: {e}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Update Error MESSAGE: Error updating supplier item: {e}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(self, "Update Error", f"Error updating supplier item: {e}")
         finally:
             self._is_handling_supplier_item_change = False
 
@@ -435,7 +584,16 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
     def add_new_supplier(self): self.clear_supplier_form(); self.sup_id_edit.setFocus()
     def save_supplier(self):
         sup_id=self.sup_id_edit.text().strip(); sup_name=self.sup_name_edit.text().strip()
-        if not sup_id or not sup_name: QMessageBox.warning(self,"Input Error","SupplierID and Name required."); return
+        if not sup_id or not sup_name:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: SupplierID and Name required."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self,"Input Error","SupplierID and Name required.")
+            return
         data_dict = {h:"" for h in SUPPLIERS_HEADERS}
         data_dict.update({'SupplierID':sup_id, 'SupplierName':sup_name, 'ContactPerson':self.sup_contact_edit.text().strip(),
                           'Email':self.sup_email_edit.text().strip(), 'Phone':self.sup_phone_edit.text().strip(),
@@ -448,14 +606,39 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
         self.parent_refresh_sup_dd_cb()
     def delete_supplier(self):
         rows=self.suppliers_table_view.selectionModel().selectedRows()
-        if not rows: QMessageBox.warning(self,"Selection Error","Select supplier to delete."); return
+        if not rows:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Selection Error MESSAGE: Select supplier to delete."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self,"Selection Error","Select supplier to delete.")
+            return
         idx=SUPPLIERS_HEADERS.index('SupplierID'); sup_id_del=self.suppliers_table_view.item(rows[0].row(),idx).text()
         if not self.materials_df.empty and 'PreferredSupplierID' in self.materials_df.columns:
             if sup_id_del in self.materials_df['PreferredSupplierID'].values:
                 used_by=self.materials_df[self.materials_df['PreferredSupplierID']==sup_id_del]['MaterialID'].tolist()
-                QMessageBox.warning(self,"Deletion Error",f"Supplier '{sup_id_del}' used by: {', '.join(used_by)}. Update materials first.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Deletion Error MESSAGE: Supplier '{sup_id_del}' used by: {', '.join(used_by)}. Update materials first."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.warning(self,"Deletion Error",f"Supplier '{sup_id_del}' used by: {', '.join(used_by)}. Update materials first.")
                 return
-        if QMessageBox.question(self,"Confirm",f"Delete '{sup_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
+        timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+        log_entry = f"[{timestamp_str}] TITLE: Confirm MESSAGE: Delete '{sup_id_del}'?" # Log the question
+        # Original: QMessageBox.question(self,"Confirm",f"Delete '{sup_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)
+        try:
+            with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                f_popup_log.write(log_entry + " (Auto-assuming Yes for non-interactive logging)\n")
+        except Exception as e_popup:
+            print(f"Failed to write to popup_messages.txt: {e_popup}")
+        # if QMessageBox.question(self,"Confirm",f"Delete '{sup_id_del}'?",QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)==QMessageBox.StandardButton.Yes:
+        if True: # Assuming 'Yes' for non-interactive script
             self.suppliers_df = self.suppliers_df[self.suppliers_df['SupplierID']!=sup_id_del].reset_index(drop=True)
             self.parent_save_cb(SUPPLIERS_FILE, self.suppliers_df, SUPPLIERS_HEADERS)
             self.refresh_suppliers_table(); self.clear_supplier_form()
@@ -517,7 +700,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
     def delete_selected_material_rows(self):
         selected_model_indices = self.materials_table_view.selectionModel().selectedRows()
         if not selected_model_indices:
-            QMessageBox.information(self, "No Selection", "Please select row(s) to delete.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: No Selection MESSAGE: Please select row(s) to delete."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "No Selection", "Please select row(s) to delete.")
             return
 
         # Get unique MaterialIDs from selected rows in the view
@@ -536,35 +726,61 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
                 # However, the current logic relies on MaterialID matching.
                 # For simplicity, we only delete rows that have a MaterialID.
                 # A more robust solution might delete by DataFrame index if MaterialID is blank.
-                QMessageBox.information(self, "Skipped Row", f"Skipped row {row_idx+1} as it has no MaterialID.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Skipped Row MESSAGE: Skipped row {row_idx+1} as it has no MaterialID."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.information(self, "Skipped Row", f"Skipped row {row_idx+1} as it has no MaterialID.")
 
 
         if not material_ids_to_delete:
-             # This can happen if selected rows are new/blank and don't have MaterialIDs yet.
-             # A simple approach is to delete based on visual row index if no material IDs were gathered.
-             # For this iteration, we'll stick to MaterialID based deletion primarily.
             if rows_to_delete_visual: # If there were selected rows but no IDs (e.g. all blank)
-                reply = QMessageBox.question(self, "Confirm Deletion",
-                                         f"Delete {len(rows_to_delete_visual)} selected blank/new row(s)? "
-                                         "These rows don't have MaterialIDs.",
-                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                if reply == QMessageBox.StandardButton.Yes:
-                    # Create a list of indices to keep
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Confirm Deletion MESSAGE: Delete {len(rows_to_delete_visual)} selected blank/new row(s)? These rows don't have MaterialIDs. (Auto-assuming Yes)"
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # reply = QMessageBox.question(self, "Confirm Deletion",
+                #                          f"Delete {len(rows_to_delete_visual)} selected blank/new row(s)? "
+                #                          "These rows don't have MaterialIDs.",
+                #                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                # if reply == QMessageBox.StandardButton.Yes:
+                if True: # Assuming Yes
                     indices_to_keep = [i for i in range(len(self.materials_df)) if i not in rows_to_delete_visual]
                     self.materials_df = self.materials_df.iloc[indices_to_keep].reset_index(drop=True)
                 else:
                     return
             else: # No rows selected or no material IDs found
-                QMessageBox.information(self, "No Action", "No rows with MaterialIDs selected for deletion.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: No Action MESSAGE: No rows with MaterialIDs selected for deletion."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.information(self, "No Action", "No rows with MaterialIDs selected for deletion.")
                 return
 
 
         if material_ids_to_delete: # Only ask for confirmation if we have IDs
-            reply = QMessageBox.question(self, "Confirm Deletion",
-                                     f"Are you sure you want to delete {len(material_ids_to_delete)} selected material(s)?\n"
-                                     f"MaterialIDs: {', '.join(material_ids_to_delete)}",
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            if reply == QMessageBox.StandardButton.No:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Confirm Deletion MESSAGE: Are you sure you want to delete {len(material_ids_to_delete)} selected material(s)? MaterialIDs: {', '.join(material_ids_to_delete)}. (Auto-assuming Yes)"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # reply = QMessageBox.question(self, "Confirm Deletion",
+            #                          f"Are you sure you want to delete {len(material_ids_to_delete)} selected material(s)?\n"
+            #                          f"MaterialIDs: {', '.join(material_ids_to_delete)}",
+            #                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            # if reply == QMessageBox.StandardButton.No:
+            if False: # Assuming 'Yes' was effectively chosen for the non-interactive flow
                 return
             # Proceed to delete rows from DataFrame that have these MaterialIDs
             self.materials_df = self.materials_df[~self.materials_df['MaterialID'].isin(material_ids_to_delete)].reset_index(drop=True)
@@ -624,7 +840,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
     def delete_selected_supplier_rows(self):
         selected_model_indices = self.suppliers_table_view.selectionModel().selectedRows()
         if not selected_model_indices:
-            QMessageBox.information(self, "No Selection", "Please select supplier row(s) to delete.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: No Selection MESSAGE: Please select supplier row(s) to delete."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "No Selection", "Please select supplier row(s) to delete.")
             return
 
         supplier_id_col_idx = SUPPLIERS_HEADERS.index('SupplierID')
@@ -658,7 +881,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
             error_messages = []
             for sup_id, mat_ids in suppliers_with_dependencies.items():
                 error_messages.append(f"Supplier '{sup_id}' is preferred by MaterialIDs: {', '.join(mat_ids)}.")
-            QMessageBox.warning(self, "Deletion Blocked", "Cannot delete supplier(s) due to dependencies:\n\n" + "\n".join(error_messages) + "\n\nPlease update materials first.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Deletion Blocked MESSAGE: Cannot delete supplier(s) due to dependencies:\n\n" + "\n".join(error_messages) + "\n\nPlease update materials first."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Deletion Blocked", "Cannot delete supplier(s) due to dependencies:\n\n" + "\n".join(error_messages) + "\n\nPlease update materials first.")
 
         # Determine if any action can be taken
         can_delete_ids = len(final_supplier_ids_to_delete) > 0
@@ -666,7 +896,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
 
         if not can_delete_ids and not can_delete_blank_rows:
             if not suppliers_with_dependencies : # Only show this if no other error was shown
-                 QMessageBox.information(self, "No Action", "No suppliers can be deleted (either due to dependencies or no valid selection).")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: No Action MESSAGE: No suppliers can be deleted (either due to dependencies or no valid selection)."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.information(self, "No Action", "No suppliers can be deleted (either due to dependencies or no valid selection).")
             return
 
         confirm_messages = []
@@ -675,10 +912,18 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
         if can_delete_blank_rows:
             confirm_messages.append(f"{len(blank_rows_to_delete_indices)} blank/new row(s).")
 
-        reply = QMessageBox.question(self, "Confirm Deletion",
-                                     "Are you sure you want to delete:\n" + "\n".join(confirm_messages),
-                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply == QMessageBox.StandardButton.No:
+        timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+        log_entry = f"[{timestamp_str}] TITLE: Confirm Deletion MESSAGE: Are you sure you want to delete:\n" + "\n".join(confirm_messages) + " (Auto-assuming Yes)"
+        try:
+            with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                f_popup_log.write(log_entry + "\n")
+        except Exception as e_popup:
+            print(f"Failed to write to popup_messages.txt: {e_popup}")
+        # reply = QMessageBox.question(self, "Confirm Deletion",
+        #                              "Are you sure you want to delete:\n" + "\n".join(confirm_messages),
+        #                              QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        # if reply == QMessageBox.StandardButton.No:
+        if False: # Assuming 'Yes' was effectively chosen for non-interactive script
             return
 
         # Perform deletions
@@ -723,7 +968,14 @@ class DataManagementWidget(QWidget): # Unchanged from last working version
                  self.suppliers_df = self.suppliers_df.iloc[indices_to_keep_for_blank].reset_index(drop=True)
                  deleted_something = True
             elif blank_rows_to_delete_indices and can_delete_ids:
-                 QMessageBox.information(self, "Note", "Deletion of blank rows in combination with ID-based deletion is complex and might be imprecise. Please verify.")
+                 timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                 log_entry = f"[{timestamp_str}] TITLE: Note MESSAGE: Deletion of blank rows in combination with ID-based deletion is complex and might be imprecise. Please verify."
+                 try:
+                     with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                         f_popup_log.write(log_entry + "\n")
+                 except Exception as e_popup:
+                     print(f"Failed to write to popup_messages.txt: {e_popup}")
+                 # QMessageBox.information(self, "Note", "Deletion of blank rows in combination with ID-based deletion is complex and might be imprecise. Please verify.")
                  # Attempting to remove based on empty SupplierID after ID-based deletion
                  self.suppliers_df = self.suppliers_df[self.suppliers_df['SupplierID'] != ''].reset_index(drop=True)
                  deleted_something = True
@@ -846,7 +1098,14 @@ class ProcurementAppGUI(QMainWindow):
                 selected_rows_indices.append(r)
 
         if len(selected_rows_indices) != 1:
-            QMessageBox.warning(self, "Selection Error", "Please select exactly one order line to flag an issue.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Selection Error MESSAGE: Please select exactly one order line to flag an issue."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Selection Error", "Please select exactly one order line to flag an issue.")
             self.checkin_log_area.append("Error: Exactly one line must be selected to flag an issue.")
             return
 
@@ -854,7 +1113,14 @@ class ProcurementAppGUI(QMainWindow):
 
         issue_notes = self.checkin_notes_edit.toPlainText().strip()
         if not issue_notes:
-            QMessageBox.warning(self, "Input Error", "Please provide notes describing the issue in the 'Notes' field.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: Please provide notes describing the issue in the 'Notes' field."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Input Error", "Please provide notes describing the issue in the 'Notes' field.")
             self.checkin_log_area.append("Error: Issue notes cannot be empty when flagging an issue.")
             return
 
@@ -862,20 +1128,41 @@ class ProcurementAppGUI(QMainWindow):
         try:
             original_idx_item = self.checkin_orders_table.item(selected_row_idx, self.checkin_orders_table_cols.index('OriginalIndex'))
             if original_idx_item is None or not original_idx_item.text():
-                QMessageBox.critical(self, "Error", "Could not retrieve original order index from selected row for flagging issue.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Error MESSAGE: Could not retrieve original order index from selected row for flagging issue."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.critical(self, "Error", "Could not retrieve original order index from selected row for flagging issue.")
                 self.checkin_log_area.append(f"Critical Error: Failed to retrieve OriginalIndex for flagging issue on table row {selected_row_idx}.")
                 return
             original_idx = int(original_idx_item.text())
 
             if original_idx not in self.order_history_df.index:
-                QMessageBox.critical(self, "Error", f"Original order index {original_idx} not found in history data for flagging issue.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Error MESSAGE: Original order index {original_idx} not found in history data for flagging issue."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.critical(self, "Error", f"Original order index {original_idx} not found in history data for flagging issue.")
                 self.checkin_log_area.append(f"Critical Error: OriginalIndex {original_idx} no longer valid for flagging issue.")
                 return
 
             order_id_display = self.order_history_df.loc[original_idx, 'OrderID']
             material_name_display = self.order_history_df.loc[original_idx, 'MaterialName']
         except (AttributeError, ValueError, KeyError) as e:
-            QMessageBox.critical(self, "Error", f"Could not retrieve order line details for flagging issue: {e}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Error MESSAGE: Could not retrieve order line details for flagging issue: {e}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(self, "Error", f"Could not retrieve order line details for flagging issue: {e}")
             self.checkin_log_area.append(f"Critical Error: Failed to retrieve details for selected line for flagging. OriginalIndex: {original_idx}. Error: {e}")
             return
 
@@ -903,7 +1190,14 @@ class ProcurementAppGUI(QMainWindow):
                 selected_rows_indices.append(r)
 
         if len(selected_rows_indices) != 1:
-            QMessageBox.warning(self, "Selection Error", "Please select exactly one order line for partial receipt.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Selection Error MESSAGE: Please select exactly one order line for partial receipt."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Selection Error", "Please select exactly one order line for partial receipt.")
             self.checkin_log_area.append("Error: Exactly one line must be selected for partial receipt.")
             return
 
@@ -912,16 +1206,37 @@ class ProcurementAppGUI(QMainWindow):
         try:
             qty_newly_received_str = self.checkin_qty_received_edit.text().strip()
             if not qty_newly_received_str: # Check if empty before attempting conversion
-                QMessageBox.warning(self, "Input Error", "Quantity received cannot be empty.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: Quantity received cannot be empty."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.warning(self, "Input Error", "Quantity received cannot be empty.")
                 self.checkin_log_area.append("Error: Quantity received input is empty.")
                 return
             qty_newly_received = int(qty_newly_received_str) # Assuming integer quantities
             if qty_newly_received <= 0:
-                QMessageBox.warning(self, "Input Error", "Quantity received must be a positive number.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: Quantity received must be a positive number."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.warning(self, "Input Error", "Quantity received must be a positive number.")
                 self.checkin_log_area.append("Error: Quantity received must be positive.")
                 return
         except ValueError:
-            QMessageBox.warning(self, "Input Error", "Invalid quantity received. Please enter a whole number.")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: Invalid quantity received. Please enter a whole number."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Input Error", "Invalid quantity received. Please enter a whole number.")
             self.checkin_log_area.append("Error: Invalid quantity received format.")
             return
 
@@ -929,18 +1244,39 @@ class ProcurementAppGUI(QMainWindow):
         try:
             original_idx_item = self.checkin_orders_table.item(selected_row_idx, self.checkin_orders_table_cols.index('OriginalIndex'))
             if original_idx_item is None or not original_idx_item.text():
-                 QMessageBox.critical(self, "Error", "Could not retrieve original order index from selected row.")
-                 self.checkin_log_area.append(f"Critical Error: Failed to retrieve OriginalIndex for selected table row {selected_row_idx}.")
-                 return
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Error MESSAGE: Could not retrieve original order index from selected row."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.critical(self, "Error", "Could not retrieve original order index from selected row.")
+                self.checkin_log_area.append(f"Critical Error: Failed to retrieve OriginalIndex for selected table row {selected_row_idx}.")
+                return
             original_idx = int(original_idx_item.text())
 
             if original_idx not in self.order_history_df.index:
-                QMessageBox.critical(self, "Error", f"Original order index {original_idx} not found in history data.")
+                timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+                log_entry = f"[{timestamp_str}] TITLE: Error MESSAGE: Original order index {original_idx} not found in history data."
+                try:
+                    with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                        f_popup_log.write(log_entry + "\n")
+                except Exception as e_popup:
+                    print(f"Failed to write to popup_messages.txt: {e_popup}")
+                # QMessageBox.critical(self, "Error", f"Original order index {original_idx} not found in history data.")
                 self.checkin_log_area.append(f"Critical Error: OriginalIndex {original_idx} no longer valid.")
                 return
             order_line = self.order_history_df.loc[original_idx].copy() # Use .copy() to avoid SettingWithCopyWarning
         except (AttributeError, ValueError, KeyError) as e:
-            QMessageBox.critical(self, "Error", f"Could not retrieve order line details: {e}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Error MESSAGE: Could not retrieve order line details: {e}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(self, "Error", f"Could not retrieve order line details: {e}")
             self.checkin_log_area.append(f"Critical Error: Failed to retrieve details for selected line. OriginalIndex: {original_idx}. Error: {e}")
             return
 
@@ -954,7 +1290,14 @@ class ProcurementAppGUI(QMainWindow):
         outstanding_qty = qty_ordered_total - qty_already_received
 
         if qty_newly_received > outstanding_qty:
-            QMessageBox.warning(self, "Input Error", f"Quantity received ({qty_newly_received}) cannot exceed outstanding quantity ({outstanding_qty:.0f}).") # Format outstanding_qty
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Input Error MESSAGE: Quantity received ({qty_newly_received}) cannot exceed outstanding quantity ({outstanding_qty:.0f})."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self, "Input Error", f"Quantity received ({qty_newly_received}) cannot exceed outstanding quantity ({outstanding_qty:.0f}).") # Format outstanding_qty
             self.checkin_log_area.append(f"Error: Received quantity {qty_newly_received} exceeds outstanding {outstanding_qty:.0f} for OrderID {order_id_display}, Material {material_name_display}.")
             return
 
@@ -1071,11 +1414,24 @@ class ProcurementAppGUI(QMainWindow):
             self.checkin_log_area.append("No items were ultimately processed for full receipt.")
 
     def load_checkable_orders(self):
+        log_file_path = "checkin_debug_log.txt"
         self.checkin_log_area.clear()
-        self.checkin_log_area.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Loading checkable orders...")
+        message_variable = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Loading checkable orders..."
+        try:
+            with open(log_file_path, "a", encoding="utf-8") as f_log:
+                f_log.write(f"{message_variable}\n")
+        except Exception as e_log:
+            print(f"Failed to write to checkin_debug_log.txt: {e_log}")
+        self.checkin_log_area.append(message_variable)
 
         if self.order_history_df is None or self.order_history_df.empty:
-            self.checkin_log_area.append("Order history is empty or not loaded.")
+            message_variable = "Order history is empty or not loaded."
+            try:
+                with open(log_file_path, "a", encoding="utf-8") as f_log:
+                    f_log.write(f"{message_variable}\n") # Corrected: f_log here
+            except Exception as e_log:
+                print(f"Failed to write to checkin_debug_log.txt: {e_log}")
+            self.checkin_log_area.append(message_variable)
             self.checkin_orders_table.setRowCount(0)
             return
 
@@ -1116,7 +1472,13 @@ class ProcurementAppGUI(QMainWindow):
             self.checkin_orders_table.setItem(r, self.checkin_orders_table_cols.index('OriginalIndex'), QTableWidgetItem(str(index)))
 
         self.checkin_orders_table.resizeColumnsToContents()
-        self.checkin_log_area.append(f"Loaded {relevant_orders_df.shape[0]} order lines.")
+        message_variable = f"Loaded {relevant_orders_df.shape[0]} order lines."
+        try:
+            with open(log_file_path, "a", encoding="utf-8") as f_log:
+                f_log.write(f"{message_variable}\n")
+        except Exception as e_log:
+            print(f"Failed to write to checkin_debug_log.txt: {e_log}")
+        self.checkin_log_area.append(message_variable)
         self.update_checkin_action_buttons_state() # Update button states after loading
 
 
@@ -1141,7 +1503,14 @@ class ProcurementAppGUI(QMainWindow):
             for header in headers_order:
                  if header not in df_to_save.columns: df_to_save[header] = ''
             df_to_save[headers_order].to_csv(file_path, index=False)
-            QMessageBox.information(self, "Success", f"Data saved to {file_path}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Success MESSAGE: Data saved to {file_path}" # Note: f-string used
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "Success", f"Data saved to {file_path}")
             if file_path == SUPPLIERS_FILE: 
                 self.suppliers_df = df.copy() 
                 if hasattr(self, 'data_management_widget'): self.data_management_widget.suppliers_df = self.suppliers_df 
@@ -1151,7 +1520,15 @@ class ProcurementAppGUI(QMainWindow):
                 if hasattr(self, 'data_management_widget'): self.data_management_widget.materials_df = self.materials_df
             elif file_path == ORDER_HISTORY_FILE: 
                 self.order_history_df = df.copy() 
-        except Exception as e: QMessageBox.critical(self, "Save Error", f"Error saving to {file_path} (App): {e}")
+        except Exception as e:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Save Error MESSAGE: Error saving to {file_path} (App): {e}" # Note: f-string used
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(self, "Save Error", f"Error saving to {file_path} (App): {e}")
 
 
     def refresh_preferred_supplier_dropdown_in_materials_tab(self):
@@ -1231,10 +1608,27 @@ class ProcurementAppGUI(QMainWindow):
         self.process_selected_orders_button.setEnabled(True if self.proposed_orders_table.rowCount() > 0 else False)
 
     # open_url_action is no longer needed as QLabel with RichText handles opening links.
-    # def open_url_action(self, url_string):
-    #     if not url_string: QMessageBox.information(self, "No URL", "No URL available."); return
+    # def open_url_action(self, url_string): # No longer needed due to direct QLabel link handling
+    #     if not url_string:
+            # timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            # log_entry = f"[{timestamp_str}] TITLE: No URL MESSAGE: No URL available."
+            # try:
+            #     with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+            #         f_popup_log.write(log_entry + "\n")
+            # except Exception as e_popup:
+            #     print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # # QMessageBox.information(self, "No URL", "No URL available.")
+    #         return
     #     if not url_string.startswith(('http://','https://')): url_string='http://'+url_string
-    #     if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self,"Open URL Failed",f"Could not open: {url_string}")
+    #     if not QDesktopServices.openUrl(QUrl(url_string)):
+            # timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            # log_entry = f"[{timestamp_str}] TITLE: Open URL Failed MESSAGE: Could not open: {url_string}"
+            # try:
+            #     with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+            #         f_popup_log.write(log_entry + "\n")
+            # except Exception as e_popup:
+            #     print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # # QMessageBox.warning(self,"Open URL Failed",f"Could not open: {url_string}")
 
     def process_selected_orders_action(self):
         self.order_process_log.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing selected orders...")
@@ -1324,14 +1718,29 @@ if __name__ == '__main__':
             for header in headers_order:
                  if header not in df_to_save.columns: df_to_save[header] = ''
             df_to_save[headers_order].to_csv(file_path, index=False)
-            QMessageBox.information(self, "Success", f"Data saved to {file_path}")
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Success MESSAGE: Data saved to {file_path}" # Note: f-string used
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "Success", f"Data saved to {file_path}")
             if file_path == SUPPLIERS_FILE:
                 self.suppliers_df = df.copy(); self.data_management_widget.suppliers_df = self.suppliers_df
                 self.refresh_preferred_supplier_dropdown_in_materials_tab()
             elif file_path == MATERIALS_FILE:
                 self.materials_df = df.copy(); self.data_management_widget.materials_df = self.materials_df
             elif file_path == ORDER_HISTORY_FILE: self.order_history_df = df.copy()
-        except Exception as e: QMessageBox.critical(self, "Save Error", f"Error saving to {file_path} (App): {e}")
+        except Exception as e:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Save Error MESSAGE: Error saving to {file_path} (App): {e}" # Note: f-string used
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.critical(self, "Save Error", f"Error saving to {file_path} (App): {e}")
 
     def refresh_preferred_supplier_dropdown_in_materials_tab(self):
         if hasattr(self, 'data_management_widget'): self.data_management_widget.populate_preferred_supplier_dropdown()
@@ -1385,9 +1794,26 @@ if __name__ == '__main__':
         self.process_selected_orders_button.setEnabled(True if self.proposed_orders_table.rowCount() > 0 else False)
 
     def open_url_action(self, url_string):
-        if not url_string: QMessageBox.information(self, "No URL", "No URL available."); return
+        if not url_string:
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: No URL MESSAGE: No URL available."
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.information(self, "No URL", "No URL available.")
+            return
         if not url_string.startswith(('http://','https://')): url_string='http://'+url_string
-        if not QDesktopServices.openUrl(QUrl(url_string)): QMessageBox.warning(self,"Open URL Failed",f"Could not open: {url_string}")
+        if not QDesktopServices.openUrl(QUrl(url_string)):
+            timestamp_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') # Added by subtask for logging
+            log_entry = f"[{timestamp_str}] TITLE: Open URL Failed MESSAGE: Could not open: {url_string}"
+            try:
+                with open("popup_messages.txt", "a", encoding="utf-8") as f_popup_log:
+                    f_popup_log.write(log_entry + "\n")
+            except Exception as e_popup:
+                print(f"Failed to write to popup_messages.txt: {e_popup}")
+            # QMessageBox.warning(self,"Open URL Failed",f"Could not open: {url_string}")
 
     def process_selected_orders_action(self):
         self.order_process_log.append(f"\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Processing selected orders...")
