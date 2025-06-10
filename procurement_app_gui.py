@@ -749,14 +749,14 @@ class ProcurementAppGUI(QMainWindow):
             self.checkin_orders_table.setRowCount(0)
             return
 
-        # Bypass Status Filtering for testing - display ALL orders
-        # relevant_orders_df = self.order_history_df[
-        #     self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
-        # ].copy()
-        relevant_orders_df = self.order_history_df.copy()
+        # Restore Status Filtering
+        relevant_orders_df = self.order_history_df[
+            self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
+        ].copy()
+        # relevant_orders_df = self.order_history_df.copy() # This line is now removed/commented
 
-        # Diagnostic logging for relevant_orders_df (now an unfiltered copy)
-        self.checkin_log_area.append(f"--- Diagnostic: relevant_orders_df (unfiltered copy) ---")
+        # Diagnostic logging for relevant_orders_df (now filtered)
+        self.checkin_log_area.append(f"--- Diagnostic: relevant_orders_df (after filtering by Status) ---")
         self.checkin_log_area.append(f"Shape: {relevant_orders_df.shape}")
         self.checkin_log_area.append("Head:\n" + relevant_orders_df.head().to_string())
         if not relevant_orders_df.empty and 'Status' in relevant_orders_df.columns:
