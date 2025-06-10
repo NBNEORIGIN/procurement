@@ -795,6 +795,34 @@ class ProcurementAppGUI(QMainWindow):
         self.checkin_log_area.append(message_variable)
         self.update_checkin_action_buttons_state()
 
+    def update_checkin_action_buttons_state(self):
+        any_selected = False
+        # Ensure the checkin_orders_table and its column definitions exist
+        if not hasattr(self, 'checkin_orders_table') or not hasattr(self, 'checkin_orders_table_cols'):
+            if hasattr(self, 'checkin_receive_selected_btn'): # Attempt to disable button if table is missing
+                self.checkin_receive_selected_btn.setEnabled(False)
+            # print("Warning: Check-in orders table or column definitions not found for button state update.")
+            return
+
+        try:
+            select_column_idx = self.checkin_orders_table_cols.index('Select')
+        except ValueError:
+            # print("Warning: 'Select' column not found in checkin_orders_table_cols for button state update.")
+            if hasattr(self, 'checkin_receive_selected_btn'): # Attempt to disable button if 'Select' col is missing
+                self.checkin_receive_selected_btn.setEnabled(False)
+            return # Cannot proceed without 'Select' column index
+
+        for r in range(self.checkin_orders_table.rowCount()):
+            cell_widget = self.checkin_orders_table.cellWidget(r, select_column_idx)
+            if isinstance(cell_widget, QCheckBox) and cell_widget.isChecked():
+                any_selected = True
+                break
+
+        if hasattr(self, 'checkin_receive_selected_btn'):
+            self.checkin_receive_selected_btn.setEnabled(any_selected)
+        # else:
+            # print("Warning: checkin_receive_selected_btn attribute not found for state update.")
+
     def save_any_dataframe(self, df, file_path, headers_order=None, create_backup=True):
         # Placeholder implementation - actual logic might be needed later
         print(f"Attempting to save dataframe to {file_path} (placeholder action)")
