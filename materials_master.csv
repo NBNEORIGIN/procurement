@@ -1,3 +1,0 @@
-MaterialID,MaterialName,Category,UnitOfMeasure,CurrentStock,ReorderPoint,StandardOrderQuantity,PreferredSupplierID,ProductPageURL,LeadTimeDays,SafetyStockQuantity,Notes,CurrentPrice
-1,Epson SC-F500 Black Ink,Ink,Bottle,0,1,1,,https://colourbyte.co.uk/epson-sc-f100-f500-dye-sublimation-black-140ml/,2,1,,20.95
-2,Epson SC-F500 Yellow Ink,Ink,Bottle,0,1,1,001,https://colourbyte.co.uk/epson-sc-f100-f500-dye-sublimation-yellow-140ml/,2,1,,20.95
