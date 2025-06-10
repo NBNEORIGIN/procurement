@@ -128,11 +128,341 @@ class DataManagementWidget(QWidget):
         self.save_any_dataframe = save_any_dataframe
         self.refresh_preferred_supplier_dropdown_in_materials_tab = refresh_preferred_supplier_dropdown_in_materials_tab
 
-        # Basic layout
-        layout = QVBoxLayout(self)
-        welcome_label = QLabel("Data Management Widget Initialized")
-        layout.addWidget(welcome_label)
-        self.setLayout(layout)
+        # Main layout for the DataManagementWidget
+        main_layout = QVBoxLayout(self)
+        self.setLayout(main_layout)
+
+        # Initialize QTabWidget
+        self.tabs = QTabWidget()
+        main_layout.addWidget(self.tabs)
+
+        # Create Materials Tab
+        self.materials_tab = QWidget()
+        self.tabs.addTab(self.materials_tab, "Materials")
+        materials_tab_layout = QVBoxLayout(self.materials_tab) # Main layout for this tab
+
+        # Materials Table
+        self.materials_table_view = QTableWidget()
+        materials_tab_layout.addWidget(self.materials_table_view)
+
+        # Material Details Form
+        details_groupbox = QGroupBox("Material Details")
+        form_layout = QFormLayout(details_groupbox)
+
+        self.mat_id_edit = QLineEdit()
+        self.mat_id_edit.setReadOnly(True) # Usually IDs are not directly editable
+        form_layout.addRow("MaterialID*:", self.mat_id_edit)
+
+        self.mat_name_edit = QLineEdit()
+        form_layout.addRow("MaterialName*:", self.mat_name_edit)
+
+        self.mat_cat_edit = QLineEdit()
+        form_layout.addRow("Category:", self.mat_cat_edit)
+
+        self.mat_uom_edit = QLineEdit()
+        form_layout.addRow("Unit of Measure:", self.mat_uom_edit)
+
+        self.mat_stock_spin = QSpinBox()
+        self.mat_stock_spin.setRange(0, 999999)
+        form_layout.addRow("Current Stock:", self.mat_stock_spin)
+
+        self.mat_rop_spin = QSpinBox()
+        self.mat_rop_spin.setRange(0, 999999)
+        form_layout.addRow("Reorder Point:", self.mat_rop_spin)
+
+        self.mat_soq_spin = QSpinBox()
+        self.mat_soq_spin.setRange(0, 999999)
+        form_layout.addRow("Std. Order Qty:", self.mat_soq_spin)
+
+        self.mat_price_spin = QDoubleSpinBox()
+        self.mat_price_spin.setRange(0, 99999.99)
+        self.mat_price_spin.setDecimals(2)
+        self.mat_price_spin.setPrefix("£")
+        form_layout.addRow("Current Price:", self.mat_price_spin)
+
+        self.mat_pref_sup_combo = QComboBox()
+        form_layout.addRow("Preferred SupplierID:", self.mat_pref_sup_combo)
+
+        self.mat_url_edit = QLineEdit()
+        form_layout.addRow("Product Page URL:", self.mat_url_edit)
+
+        self.mat_lead_spin = QSpinBox()
+        self.mat_lead_spin.setRange(0, 365)
+        form_layout.addRow("Lead Time (Days):", self.mat_lead_spin)
+
+        self.mat_safe_stock_spin = QSpinBox()
+        self.mat_safe_stock_spin.setRange(0, 999999)
+        form_layout.addRow("Safety Stock Qty:", self.mat_safe_stock_spin)
+
+        self.mat_notes_edit = QTextEdit()
+        self.mat_notes_edit.setFixedHeight(60)
+        form_layout.addRow("Notes:", self.mat_notes_edit)
+
+        materials_tab_layout.addWidget(details_groupbox)
+
+        # Action Buttons
+        buttons_layout = QHBoxLayout()
+        self.mat_add_btn = QPushButton("Add New Material")
+        self.mat_save_btn = QPushButton("Save Material")
+        self.mat_del_btn = QPushButton("Delete Material")
+        self.mat_clear_btn = QPushButton("Clear Form")
+
+        buttons_layout.addWidget(self.mat_add_btn)
+        buttons_layout.addWidget(self.mat_save_btn)
+        buttons_layout.addWidget(self.mat_del_btn)
+        buttons_layout.addWidget(self.mat_clear_btn)
+        materials_tab_layout.addLayout(buttons_layout)
+
+        self.materials_tab.setLayout(materials_tab_layout)
+
+        # Create Suppliers Tab
+        self.suppliers_tab = QWidget()
+        self.tabs.addTab(self.suppliers_tab, "Suppliers")
+        suppliers_tab_layout = QVBoxLayout(self.suppliers_tab) # Main layout for this tab
+
+        # Remove placeholder if any - already done by creating new QVBoxLayout
+
+        # Suppliers Table
+        self.suppliers_table_view = QTableWidget()
+        suppliers_tab_layout.addWidget(self.suppliers_table_view)
+
+        # Supplier Details Form
+        sup_details_groupbox = QGroupBox("Supplier Details")
+        sup_form_layout = QFormLayout(sup_details_groupbox)
+
+        self.sup_id_edit = QLineEdit()
+        self.sup_id_edit.setReadOnly(True) # Usually IDs are not directly editable
+        sup_form_layout.addRow("SupplierID*:", self.sup_id_edit)
+
+        self.sup_name_edit = QLineEdit()
+        sup_form_layout.addRow("SupplierName*:", self.sup_name_edit)
+
+        self.sup_contact_edit = QLineEdit()
+        sup_form_layout.addRow("Contact Person:", self.sup_contact_edit)
+
+        self.sup_email_edit = QLineEdit()
+        sup_form_layout.addRow("Email:", self.sup_email_edit)
+
+        self.sup_phone_edit = QLineEdit()
+        sup_form_layout.addRow("Phone:", self.sup_phone_edit)
+
+        self.sup_website_edit = QLineEdit()
+        sup_form_layout.addRow("Website:", self.sup_website_edit)
+
+        self.sup_order_method_combo = QComboBox()
+        self.sup_order_method_combo.addItems(["", "email", "online", "phone", "other"])
+        sup_form_layout.addRow("Order Method:", self.sup_order_method_combo)
+
+        suppliers_tab_layout.addWidget(sup_details_groupbox)
+
+        # Action Buttons for Suppliers
+        sup_buttons_layout = QHBoxLayout()
+        self.sup_add_btn = QPushButton("Add New Supplier")
+        self.sup_save_btn = QPushButton("Save Supplier")
+        self.sup_del_btn = QPushButton("Delete Supplier")
+        self.sup_clear_btn = QPushButton("Clear Form")
+
+        sup_buttons_layout.addWidget(self.sup_add_btn)
+        sup_buttons_layout.addWidget(self.sup_save_btn)
+        sup_buttons_layout.addWidget(self.sup_del_btn)
+        sup_buttons_layout.addWidget(self.sup_clear_btn)
+        suppliers_tab_layout.addLayout(sup_buttons_layout)
+
+        self.suppliers_tab.setLayout(suppliers_tab_layout)
+
+        # Initial data population and signal connections
+        self.populate_preferred_supplier_dropdown()
+        self.refresh_materials_table()
+        self.materials_table_view.itemSelectionChanged.connect(self.on_material_selected)
+        self.mat_clear_btn.clicked.connect(self.clear_material_form)
+
+        self.refresh_suppliers_table() # Call for suppliers tab
+        self.suppliers_table_view.itemSelectionChanged.connect(self.on_supplier_selected)
+        self.sup_clear_btn.clicked.connect(self.clear_supplier_form)
+
+        # Connect save buttons
+        self.mat_save_btn.clicked.connect(self.save_material_data)
+        self.sup_save_btn.clicked.connect(self.save_supplier_data)
+
+
+    def populate_preferred_supplier_dropdown(self):
+        self.mat_pref_sup_combo.clear()
+        self.mat_pref_sup_combo.addItem("", None)  # Add an empty item
+        if self.suppliers_df is not None and not self.suppliers_df.empty:
+            for index, row in self.suppliers_df.iterrows():
+                supplier_id = row['SupplierID']
+                supplier_name = row['SupplierName']
+                self.mat_pref_sup_combo.addItem(f"{supplier_id} : {supplier_name}", supplier_id)
+
+    def refresh_materials_table(self):
+        if self.materials_df is None:
+            # Handle case where dataframe might not be loaded yet, though __init__ implies it is.
+            print("Materials dataframe not available for refreshing table.")
+            return
+
+        self.materials_table_view.setRowCount(0) # Clear existing rows
+        self.materials_table_view.setColumnCount(len(MATERIALS_HEADERS))
+        self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS)
+
+        for row_idx, row_data in self.materials_df.iterrows():
+            self.materials_table_view.insertRow(row_idx)
+            for col_idx, header in enumerate(MATERIALS_HEADERS):
+                item_value = str(row_data.get(header, ''))
+                table_item = QTableWidgetItem(item_value)
+                self.materials_table_view.setItem(row_idx, col_idx, table_item)
+
+        self.materials_table_view.resizeColumnsToContents()
+        self.materials_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.materials_table_view.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+
+
+    def on_material_selected(self):
+        # Placeholder for when a material is selected in the table
+        # This method will populate the form fields with the selected material's data
+        selected_items = self.materials_table_view.selectedItems()
+        if not selected_items:
+            return # No selection or selection cleared
+
+        selected_row = self.materials_table_view.currentRow()
+        if selected_row < 0 or selected_row >= len(self.materials_df):
+             self.clear_material_form() # If selection is somehow invalid, clear form
+             return
+
+        material_data = self.materials_df.iloc[selected_row]
+
+        self.mat_id_edit.setText(str(material_data.get('MaterialID', '')))
+        self.mat_name_edit.setText(str(material_data.get('MaterialName', '')))
+        self.mat_cat_edit.setText(str(material_data.get('Category', '')))
+        self.mat_uom_edit.setText(str(material_data.get('UnitOfMeasure', '')))
+        self.mat_stock_spin.setValue(get_int_val(material_data.get('CurrentStock', 0)))
+        self.mat_rop_spin.setValue(get_int_val(material_data.get('ReorderPoint', 0)))
+        self.mat_soq_spin.setValue(get_int_val(material_data.get('StandardOrderQuantity', 0)))
+        self.mat_price_spin.setValue(get_float_val(material_data.get('CurrentPrice', 0.0)))
+
+        pref_sup_id = str(material_data.get('PreferredSupplierID', ''))
+        combo_idx = self.mat_pref_sup_combo.findData(pref_sup_id)
+        if combo_idx != -1:
+            self.mat_pref_sup_combo.setCurrentIndex(combo_idx)
+        else:
+            self.mat_pref_sup_combo.setCurrentIndex(0) # Select empty item if not found
+
+        self.mat_url_edit.setText(str(material_data.get('ProductPageURL', '')))
+        self.mat_lead_spin.setValue(get_int_val(material_data.get('LeadTimeDays', 0)))
+        self.mat_safe_stock_spin.setValue(get_int_val(material_data.get('SafetyStockQuantity', 0)))
+        self.mat_notes_edit.setText(str(material_data.get('Notes', '')))
+
+
+    def clear_material_form(self):
+        self.mat_id_edit.clear()
+        self.mat_name_edit.clear()
+        self.mat_cat_edit.clear()
+        self.mat_uom_edit.clear()
+        self.mat_stock_spin.setValue(0)
+        self.mat_rop_spin.setValue(0)
+        self.mat_soq_spin.setValue(0)
+        self.mat_price_spin.setValue(0.0)
+        self.mat_pref_sup_combo.setCurrentIndex(0) # Select empty item
+        self.mat_url_edit.clear()
+        self.mat_lead_spin.setValue(0)
+        self.mat_safe_stock_spin.setValue(0)
+        self.mat_notes_edit.clear()
+        self.materials_table_view.clearSelection()
+
+    def refresh_suppliers_table(self):
+        if self.suppliers_df is None:
+            print("Suppliers dataframe not available for refreshing table.")
+            return
+
+        self.suppliers_table_view.setRowCount(0) # Clear existing rows
+        self.suppliers_table_view.setColumnCount(len(SUPPLIERS_HEADERS))
+        self.suppliers_table_view.setHorizontalHeaderLabels(SUPPLIERS_HEADERS)
+
+        for row_idx, row_data in self.suppliers_df.iterrows():
+            self.suppliers_table_view.insertRow(row_idx)
+            for col_idx, header in enumerate(SUPPLIERS_HEADERS):
+                item_value = str(row_data.get(header, ''))
+                table_item = QTableWidgetItem(item_value)
+                self.suppliers_table_view.setItem(row_idx, col_idx, table_item)
+
+        self.suppliers_table_view.resizeColumnsToContents()
+        self.suppliers_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.suppliers_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.suppliers_table_view.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+
+    def on_supplier_selected(self):
+        selected_items = self.suppliers_table_view.selectedItems()
+        if not selected_items:
+            return
+
+        selected_row = self.suppliers_table_view.currentRow()
+        if selected_row < 0 or selected_row >= len(self.suppliers_df):
+            self.clear_supplier_form()
+            return
+
+        supplier_data = self.suppliers_df.iloc[selected_row]
+
+        self.sup_id_edit.setText(str(supplier_data.get('SupplierID', '')))
+        self.sup_name_edit.setText(str(supplier_data.get('SupplierName', '')))
+        self.sup_contact_edit.setText(str(supplier_data.get('ContactPerson', '')))
+        self.sup_email_edit.setText(str(supplier_data.get('Email', '')))
+        self.sup_phone_edit.setText(str(supplier_data.get('Phone', '')))
+        self.sup_website_edit.setText(str(supplier_data.get('Website', '')))
+
+        order_method = str(supplier_data.get('OrderMethod', ''))
+        combo_idx = self.sup_order_method_combo.findText(order_method)
+        if combo_idx != -1:
+            self.sup_order_method_combo.setCurrentIndex(combo_idx)
+        else:
+            self.sup_order_method_combo.setCurrentIndex(0) # Select empty item
+
+    def clear_supplier_form(self):
+        self.sup_id_edit.clear()
+        self.sup_name_edit.clear()
+        self.sup_contact_edit.clear()
+        self.sup_email_edit.clear()
+        self.sup_phone_edit.clear()
+        self.sup_website_edit.clear()
+        self.sup_order_method_combo.setCurrentIndex(0)
+        self.suppliers_table_view.clearSelection()
+
+    def save_material_data(self):
+        material_id = self.mat_id_edit.text()
+        print(f"Save Material button clicked. Data to save (MaterialID): {material_id}")
+        # TODO: Gather all data, validate, update self.materials_df
+        # TODO: Call self.save_any_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS)
+        # TODO: Call self.refresh_materials_table() and self.clear_material_form()
+        # Actual save logic will be more complex and involve handling new vs existing IDs.
+        if not material_id: # Basic check for new material (ID might be generated or entered)
+            print("MaterialID is empty. Further logic needed for adding new material.")
+
+        # Example of how data could be gathered (needs to be more robust)
+        # data = {
+        #     'MaterialID': material_id,
+        #     'MaterialName': self.mat_name_edit.text(),
+        #     # ... other fields ...
+        # }
+        # print("Material data gathered (example):", data)
+
+
+    def save_supplier_data(self):
+        supplier_id = self.sup_id_edit.text()
+        print(f"Save Supplier button clicked. Data to save (SupplierID): {supplier_id}")
+        # TODO: Gather all data, validate, update self.suppliers_df
+        # TODO: Call self.save_any_dataframe(self.suppliers_df, SUPPLIERS_FILE, SUPPLIERS_HEADERS)
+        # TODO: Call self.refresh_suppliers_table(), self.clear_supplier_form()
+        # TODO: Call self.populate_preferred_supplier_dropdown() if supplier names/IDs change that are used in materials tab
+        if not supplier_id:
+            print("SupplierID is empty. Further logic needed for adding new supplier.")
+
+        # Example of how data could be gathered
+        # data = {
+        #    'SupplierID': supplier_id,
+        #    'SupplierName': self.sup_name_edit.text(),
+        #    # ... other fields
+        # }
+        # print("Supplier data gathered (example):", data)
+
 
 # ... (The rest of the DataManagementWidget and other parts of the file would continue here)
 # ... I will truncate for brevity in this example, but the full file would be included.
