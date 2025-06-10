@@ -10,7 +10,7 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIntValidator
 import os
 from datetime import datetime
-from main import append_to_csv
+from main import append_to_csv, main as generate_orders_main_logic
 
 def generate_order_id():
     return f"PO-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
@@ -483,10 +483,43 @@ class ProcurementAppGUI(QMainWindow):
         
         self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders")
         gen_ord_layout = QVBoxLayout(self.generate_orders_tab)
+
+        # Add "Generate Purchase Orders" button
+        self.run_order_generation_btn = QPushButton("Generate Purchase Orders")
+        gen_ord_layout.addWidget(self.run_order_generation_btn)
+
+        # Add log area for order generation
+        self.order_generation_log_area = QTextEdit()
+        self.order_generation_log_area.setReadOnly(True)
+        gen_ord_layout.addWidget(self.order_generation_log_area)
+        self.run_order_generation_btn.clicked.connect(self.handle_order_generation) # Connect button
+
+        # self.generate_orders_tab.setLayout(gen_ord_layout) # Already set when creating QVBoxLayout with parent
+
         # ... (rest of __init__ method)
 
         self.setup_check_in_orders_tab() # Setup for Check-In Orders Tab
         self.load_checkable_orders() # Initial load
+
+    def log_to_order_generation_area(self, message):
+        self.order_generation_log_area.append(str(message)) # Ensure message is string
+        QApplication.processEvents() # Keep UI responsive
+
+    def handle_order_generation(self):
+        self.order_generation_log_area.clear()
+        self.log_to_order_generation_area("Starting order generation process...")
+        try:
+            summary_report = generate_orders_main_logic(logger_func=self.log_to_order_generation_area)
+            # The summary_report is already logged item by item by generate_orders_main_logic via logger_func
+            # So, we just need a concluding message.
+            # self.log_to_order_generation_area("\n--- Summary Report ---") # Optional: if you want to re-log the whole summary
+            # for item in summary_report:
+            #     self.log_to_order_generation_area(item)
+            self.log_to_order_generation_area("\nOrder generation process finished.")
+            QMessageBox.information(self, "Process Complete", "Order generation process finished. See log for details.")
+        except Exception as e:
+            self.log_to_order_generation_area(f"\nAn error occurred during order generation: {e}")
+            QMessageBox.critical(self, "Error", f"An error occurred during order generation: {e}")
 
     def setup_check_in_orders_tab(self):
         self.check_in_orders_tab = QWidget()

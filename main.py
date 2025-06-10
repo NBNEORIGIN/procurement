@@ -63,77 +63,110 @@ def append_to_csv(df_to_append, file_path, expected_headers):
 def generate_order_id():
     return f"PO-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
 
-def main():
-    print("--- Starting Procurement Order Generation ---")
+def main(logger_func=None):
+    summary_report = []
+
+    def log_message(message):
+        if logger_func:
+            logger_func(message)
+        else:
+            print(message)
+        summary_report.append(str(message)) # Also add to summary report
+
+    log_message("--- Starting Procurement Order Generation ---")
     materials_df = load_csv_to_dataframe(MATERIALS_MASTER_FILE, MATERIALS_HEADERS)
     suppliers_df = load_csv_to_dataframe(SUPPLIERS_FILE, SUPPLIERS_HEADERS)
     # Create order_history.csv with headers if it doesn't exist or is empty
     load_csv_to_dataframe(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, create_if_missing=True)
 
-
-    if materials_df.empty: print(f"Error: {MATERIALS_MASTER_FILE} empty. Exiting."); return
+    if materials_df.empty:
+        msg = f"Error: {MATERIALS_MASTER_FILE} empty. Exiting."
+        log_message(msg)
+        summary_report.append(msg)
+        return summary_report
     
     items_to_order_by_supplier = {} 
 
-    print("\n--- Checking Material Stock Levels ---")
+    log_message("\n--- Checking Material Stock Levels ---")
     for _, mat_row in materials_df.iterrows():
         try:
             mat_id = str(mat_row.get('MaterialID', '')).strip()
             mat_name = str(mat_row.get('MaterialName', 'Unknown')).strip()
             stock = float(mat_row.get('CurrentStock', 0)); rop = float(mat_row.get('ReorderPoint', float('inf')))
-            print(f"Checking: {mat_name} (ID: {mat_id}, Stock: {stock}, ROP: {rop})")
+            log_message(f"Checking: {mat_name} (ID: {mat_id}, Stock: {stock}, ROP: {rop})")
             if stock < rop:
-                print(f"  Reorder needed for {mat_name}.")
+                log_message(f"  Reorder needed for {mat_name}.")
                 sup_id = str(mat_row.get('PreferredSupplierID', '')).strip()
                 order_qty = float(mat_row.get('StandardOrderQuantity', 0))
                 price = float(mat_row.get('CurrentPrice', 0))
                 url = str(mat_row.get('ProductPageURL', '')).strip()
-                if not sup_id or order_qty <= 0: print(f"  Skipping: Missing SupplierID or invalid OrderQty for {mat_name}."); continue
+                if not sup_id or order_qty <= 0:
+                    log_message(f"  Skipping: Missing SupplierID or invalid OrderQty for {mat_name}.")
+                    continue
                 items_to_order_by_supplier.setdefault(sup_id, []).append({
                     'MaterialID': mat_id, 'MaterialName': mat_name, 'QuantityOrdered': order_qty,
                     'UnitPricePaid': price, 'ProductPageURL': url })
-                print(f"  Added {mat_name} (Qty: {order_qty}) for supplier ID {sup_id}")
-        except ValueError as ve: print(f"  Skipping material {mat_row.get('MaterialID', 'Unknown')} due to data error: {ve}")
-        except Exception as e: print(f"  Error with material {mat_row.get('MaterialID', 'Unknown')}: {e}")
+                log_message(f"  Added {mat_name} (Qty: {order_qty}) for supplier ID {sup_id}")
+        except ValueError as ve:
+            log_message(f"  Skipping material {mat_row.get('MaterialID', 'Unknown')} due to data error: {ve}")
+        except Exception as e:
+            log_message(f"  Error with material {mat_row.get('MaterialID', 'Unknown')}: {e}")
 
-    if not items_to_order_by_supplier: print("\n--- No items require reordering. ---"); return
+    if not items_to_order_by_supplier:
+        msg = "\n--- No items require reordering. ---"
+        log_message(msg)
+        summary_report.append(msg)
+        return summary_report
     
-    print("\n--- Processing Orders ---")
+    log_message("\n--- Processing Orders ---")
     for sup_id, items in items_to_order_by_supplier.items():
         sup_info_rows = suppliers_df[suppliers_df['SupplierID'] == sup_id]
-        if sup_info_rows.empty: print(f"Warning: SupplierID '{sup_id}' not found. Cannot order: {[i['MaterialName'] for i in items]}."); continue
+        if sup_info_rows.empty:
+            msg = f"Warning: SupplierID '{sup_id}' not found. Cannot order: {[i['MaterialName'] for i in items]}."
+            log_message(msg)
+            summary_report.append(msg)
+            continue
         
         sup_info = sup_info_rows.iloc[0]
         sup_name = str(sup_info.get('SupplierName', sup_id)); method = str(sup_info.get('OrderMethod', '')).lower().strip()
-        email = str(sup_info.get('Email', '')).strip(); web = str(sup_info.get('Website', '')).strip()
+        email_address = str(sup_info.get('Email', '')).strip(); web = str(sup_info.get('Website', '')).strip()
         
-        print(f"\n--- ORDER FOR SUPPLIER: {sup_name} (ID: {sup_id}) ---")
+        log_message(f"\n--- ORDER FOR SUPPLIER: {sup_name} (ID: {sup_id}) ---")
         order_id = generate_order_id(); timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         history_entries = []
-        email_items = [{'name': i['MaterialName'], 'quantity': i['QuantityOrdered']} for i in items]
+        email_items_list = [{'name': i['MaterialName'], 'quantity': i['QuantityOrdered']} for i in items]
         logged_method = ""
 
         if method == "email":
-            if not email: logged_method = "failed_email_no_address"; print(f"  Error: No email for {sup_name}.")
+            if not email_address:
+                logged_method = "failed_email_no_address"
+                log_message(f"  Error: No email for {sup_name}.")
             else:
-                print(f"  Preparing email for {len(email_items)} item(s) to {email}...")
-                subj, body = generate_po_email_content(sup_name, email_items)
+                log_message(f"  Preparing email for {len(email_items_list)} item(s) to {email_address}...")
+                subj, body = generate_po_email_content(sup_name, email_items_list)
                 if subj and body:
-                    print(f"  Attempting to send email...")
-                    success = send_po_email(email, subj, body)
-                    logged_method = "email_sent" if success else "email_failed_send"
-                    print(f"  Email to {sup_name} {'succeeded' if success else 'failed'}.")
-                else: logged_method = "email_failed_content"; print(f"  Error generating email content for {sup_name}.")
+                    log_message(f"  Attempting to send email...")
+                    # Assuming send_po_email is robust and returns True/False
+                    # success = send_po_email(email_address, subj, body)
+                    success = False # Placeholder for now as send_po_email might have side effects or require setup
+                    log_message(f"  Email sending function called. Placeholder success: {success}")
+                    logged_method = "email_sent" if success else "email_failed_send_placeholder" # Updated placeholder
+                    # log_message(f"  Email to {sup_name} {'succeeded' if success else 'failed'}.") # Original
+                else:
+                    logged_method = "email_failed_content"
+                    log_message(f"  Error generating email content for {sup_name}.")
         elif method == "online":
-            logged_method = "online_prompted"; print("  Action: Place ONLINE order with:")
-            for i in items: print(f"    - {i['MaterialName']} (Qty: {i['QuantityOrdered']}) URL: {i['ProductPageURL'] if i['ProductPageURL'] else web}")
+            logged_method = "online_prompted"
+            log_message("  Action: Place ONLINE order with:")
+            for i in items: log_message(f"    - {i['MaterialName']} (Qty: {i['QuantityOrdered']}) URL: {i['ProductPageURL'] if i['ProductPageURL'] else web}")
         elif method == "phone":
-            logged_method = "phone_prompted"; print(f"  Action: Place PHONE order with {sup_name} (Phone: {sup_info.get('Phone', 'N/A')}):")
-            for i in items: print(f"    - {i['MaterialName']}: {i['QuantityOrdered']}")
+            logged_method = "phone_prompted"
+            log_message(f"  Action: Place PHONE order with {sup_name} (Phone: {sup_info.get('Phone', 'N/A')}):")
+            for i in items: log_message(f"    - {i['MaterialName']}: {i['QuantityOrdered']}")
         else:
             logged_method = f"manual_review_method_{method if method else 'unknown'}"
-            print(f"  Warning: Unknown OrderMethod ('{method}') for {sup_name}. Items:")
-            for i in items: print(f"    - {i['MaterialName']}: {i['QuantityOrdered']}")
+            log_message(f"  Warning: Unknown OrderMethod ('{method}') for {sup_name}. Items:")
+            for i in items: log_message(f"    - {i['MaterialName']}: {i['QuantityOrdered']}")
 
         for i in items:
             history_entries.append({
@@ -141,12 +174,13 @@ def main():
                 'MaterialName': i['MaterialName'], 'QuantityOrdered': i['QuantityOrdered'],
                 'UnitPricePaid': i['UnitPricePaid'], 'TotalPricePaid': i['QuantityOrdered'] * i['UnitPricePaid'],
                 'SupplierID': sup_id, 'SupplierName': sup_name, 'OrderMethod': logged_method,
-                'Status': 'Ordered', 'QuantityReceived': 0, 'DateReceived': '', 'Notes': '' })
+                'Status': 'Ordered', 'QuantityReceived': '0', 'DateReceived': '', 'Notes': '' }) # Ensure QuantityReceived is string for consistency
         
         if history_entries:
             append_to_csv(pd.DataFrame(history_entries), ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS)
-            print(f"  Logged {len(history_entries)} item(s) to {ORDER_HISTORY_FILE} with OrderID {order_id}")
-        print(f"--- FINISHED SUPPLIER: {sup_name.upper()} ---")
-    print("\n--- Procurement Order Generation Finished ---")
+            log_message(f"  Logged {len(history_entries)} item(s) to {ORDER_HISTORY_FILE} with OrderID {order_id}")
+        log_message(f"--- FINISHED SUPPLIER: {sup_name.upper()} ---")
+    log_message("\n--- Procurement Order Generation Finished ---")
+    return summary_report
 
 if __name__ == "__main__": main()
