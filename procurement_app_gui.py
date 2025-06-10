@@ -1434,7 +1434,39 @@ class ProcurementAppGUI(QMainWindow):
             self.checkin_log_area.append(message_variable)
             self.checkin_orders_table.setRowCount(0)
             return
+        # New detailed logging starts here
+    # Ensure log_file_path is defined; if not, add this line near the top of the function: 
+    # log_file_path = "checkin_debug_log.txt" 
+    # And ensure 'datetime' is imported at the top of the Python file (it should be).
+    current_time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+    detailed_log_entries = []
+    detailed_log_entries.append(f"[DETAIL {current_time_str}] order_history_df available. Shape: {self.order_history_df.shape}")
+    detailed_log_entries.append(f"[DETAIL {current_time_str}] First 3 rows of order_history_df:\n{self.order_history_df.head(3).to_string()}")
 
+    if 'Status' in self.order_history_df.columns:
+        detailed_log_entries.append(f"[DETAIL {current_time_str}] Unique statuses in order_history_df['Status'] before filtering: {list(self.order_history_df['Status'].unique())}")
+        status_match_series = self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
+        detailed_log_entries.append(f"[DETAIL {current_time_str}] Count of rows matching status criteria ('Ordered', 'Partially Received'): {status_match_series.sum()}")
+        detailed_log_entries.append(f"[DETAIL {current_time_str}] First 5 values of status_match_series:\n{status_match_series.head(5).to_string()}")
+    else:
+        detailed_log_entries.append(f"[DETAIL {current_time_str}] 'Status' column NOT FOUND in order_history_df. Columns are: {self.order_history_df.columns.tolist()}")
+
+    # Check if log_file_path is defined, fallback to a default if not (though it should be)
+    resolved_log_file_path = "checkin_debug_log.txt"
+    try:
+        # Try to use the log_file_path defined in the function if it exists
+        if 'log_file_path' in locals() and log_file_path:
+            resolved_log_file_path = log_file_path
+    except NameError: # Fallback if log_file_path isn't defined at all
+        pass
+
+    for entry in detailed_log_entries:
+        try:
+            with open(resolved_log_file_path, "a", encoding="utf-8") as f_log:
+                f_log.write(entry + "\n")
+        except Exception as e_detailed_log:
+            print(f"Failed to write detailed log to {resolved_log_file_path}: {e_detailed_log} - Log content: {entry}")
+    # New detailed logging ends here
         relevant_orders_df = self.order_history_df[
             self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
         ].copy()
