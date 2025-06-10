@@ -10,7 +10,9 @@ from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIntValidator
 import os
 from datetime import datetime
-from main import append_to_csv, main as generate_orders_main_logic
+from main import (append_to_csv, main as generate_orders_main_logic,
+                  process_single_purchase_order, log_order_to_history,
+                  SUPPLIERS_FILE, SUPPLIERS_HEADERS) # Added new imports
 
 def generate_order_id():
     return f"PO-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
@@ -484,42 +486,193 @@ class ProcurementAppGUI(QMainWindow):
         self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders")
         gen_ord_layout = QVBoxLayout(self.generate_orders_tab)
 
-        # Add "Generate Purchase Orders" button
-        self.run_order_generation_btn = QPushButton("Generate Purchase Orders")
-        gen_ord_layout.addWidget(self.run_order_generation_btn)
+        # New UI for Generate Orders Tab
+        self.refresh_suggested_orders_btn = QPushButton("Refresh Suggested Orders")
+        gen_ord_layout.addWidget(self.refresh_suggested_orders_btn)
 
-        # Add log area for order generation
-        self.order_generation_log_area = QTextEdit()
-        self.order_generation_log_area.setReadOnly(True)
-        gen_ord_layout.addWidget(self.order_generation_log_area)
-        self.run_order_generation_btn.clicked.connect(self.handle_order_generation) # Connect button
+        self.suggested_orders_table = QTableWidget()
+        # Define headers that main.py's main() will return for suggested orders
+        self._suggested_orders_headers = ['Select', 'MaterialID', 'MaterialName', 'CurrentStock', 'ReorderPoint', 'PreferredSupplierID', 'QuantityToOrder', 'UnitPrice', 'ProductPageURL']
+        self.suggested_orders_table.setColumnCount(len(self._suggested_orders_headers))
+        self.suggested_orders_table.setHorizontalHeaderLabels(self._suggested_orders_headers)
+        gen_ord_layout.addWidget(self.suggested_orders_table)
 
-        # self.generate_orders_tab.setLayout(gen_ord_layout) # Already set when creating QVBoxLayout with parent
+        self.process_selected_order_btn = QPushButton("Process Selected Orders")
+        self.process_selected_order_btn.setEnabled(False)
+        gen_ord_layout.addWidget(self.process_selected_order_btn)
+
+        self.suggested_orders_log_area = QTextEdit()
+        self.suggested_orders_log_area.setReadOnly(True)
+        self.suggested_orders_log_area.setFixedHeight(100)
+        gen_ord_layout.addWidget(self.suggested_orders_log_area)
+
+        self.refresh_suggested_orders_btn.clicked.connect(self.display_suggested_orders)
+        self.process_selected_order_btn.clicked.connect(self.process_selected_orders)
+        self.suggested_orders_table.itemChanged.connect(self.update_process_button_state) # For checkbox changes
+
+        # self.generate_orders_tab.setLayout(gen_ord_layout) # Already set
 
         # ... (rest of __init__ method)
 
         self.setup_check_in_orders_tab() # Setup for Check-In Orders Tab
         self.load_checkable_orders() # Initial load
 
+    # Note: log_to_order_generation_area and handle_order_generation might be removed or repurposed later
+    # if they are no longer used by any active UI element. For now, they remain.
     def log_to_order_generation_area(self, message):
-        self.order_generation_log_area.append(str(message)) # Ensure message is string
-        QApplication.processEvents() # Keep UI responsive
+        # This method might be deprecated if suggested_orders_log_area is used exclusively for this tab's logging
+        if hasattr(self, 'order_generation_log_area') and self.order_generation_log_area is not None:
+             self.order_generation_log_area.append(str(message))
+             QApplication.processEvents()
+        else: # Fallback or if used by other processes that don't have a dedicated log area
+            print(f"Legacy log: {message}")
+
 
     def handle_order_generation(self):
-        self.order_generation_log_area.clear()
-        self.log_to_order_generation_area("Starting order generation process...")
+        # This method is currently not connected to any button in the redesigned UI.
+        # It might be removed or adapted if a "Process All" functionality is added later.
+        self.log_to_order_generation_area("Legacy handle_order_generation called (currently not connected to UI button)...")
         try:
             summary_report = generate_orders_main_logic(logger_func=self.log_to_order_generation_area)
-            # The summary_report is already logged item by item by generate_orders_main_logic via logger_func
-            # So, we just need a concluding message.
-            # self.log_to_order_generation_area("\n--- Summary Report ---") # Optional: if you want to re-log the whole summary
-            # for item in summary_report:
-            #     self.log_to_order_generation_area(item)
             self.log_to_order_generation_area("\nOrder generation process finished.")
-            QMessageBox.information(self, "Process Complete", "Order generation process finished. See log for details.")
+            QMessageBox.information(self, "Process Complete", "Legacy order generation process finished. See log for details.")
+            self.load_checkable_orders()
         except Exception as e:
-            self.log_to_order_generation_area(f"\nAn error occurred during order generation: {e}")
-            QMessageBox.critical(self, "Error", f"An error occurred during order generation: {e}")
+            self.log_to_order_generation_area(f"\nAn error occurred during legacy order generation: {e}")
+            QMessageBox.critical(self, "Error", f"An error occurred during legacy order generation: {e}")
+
+    def log_to_suggested_orders_area(self, message):
+        self.suggested_orders_log_area.append(str(message))
+        QApplication.processEvents()
+
+    def display_suggested_orders(self):
+        self.suggested_orders_log_area.clear()
+        self.log_to_suggested_orders_area("Refreshing suggested orders...")
+
+        try:
+            # generate_orders_main_logic now returns just the list of suggestions
+            suggested_orders_list = generate_orders_main_logic(logger_func=self.log_to_suggested_orders_area)
+        except Exception as e:
+            self.log_to_suggested_orders_area(f"Error generating suggestions: {e}")
+            QMessageBox.critical(self, "Error", f"Error generating suggestions: {e}")
+            suggested_orders_list = []
+
+        self.suggested_orders_table.setRowCount(0)
+        # Headers are set in __init__, but good to ensure column count matches if headers definition changes
+        self.suggested_orders_table.setColumnCount(len(self._suggested_orders_headers))
+        self.suggested_orders_table.setHorizontalHeaderLabels(self._suggested_orders_headers)
+
+        for row_idx, item_data in enumerate(suggested_orders_list):
+            self.suggested_orders_table.insertRow(row_idx)
+
+            # CheckBox for 'Select' column
+            chkbox_item = QTableWidgetItem()
+            chkbox_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+            chkbox_item.setCheckState(Qt.CheckState.Unchecked)
+            self.suggested_orders_table.setItem(row_idx, 0, chkbox_item) # Column 0 for 'Select'
+
+            # Populate other cells based on _suggested_orders_headers (skipping 'Select')
+            for col_idx, header_key in enumerate(self._suggested_orders_headers[1:], start=1):
+                value = item_data.get(header_key, '')
+                self.suggested_orders_table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
+
+        self.suggested_orders_table.resizeColumnsToContents()
+
+        if suggested_orders_list:
+            self.process_selected_order_btn.setEnabled(True)
+            self.log_to_suggested_orders_area(f"Found {len(suggested_orders_list)} suggested orders.")
+        else:
+            self.process_selected_order_btn.setEnabled(False)
+            self.log_to_suggested_orders_area("No suggested orders found.")
+        QMessageBox.information(self, "Refresh Complete", "Suggested orders list has been refreshed.")
+
+    def update_process_button_state(self):
+        any_checked = False
+        for i in range(self.suggested_orders_table.rowCount()):
+            item = self.suggested_orders_table.item(i, 0) # Checkbox in column 0
+            if item and item.checkState() == Qt.CheckState.Checked:
+                any_checked = True
+                break
+        self.process_selected_order_btn.setEnabled(any_checked)
+
+    def process_selected_orders(self):
+        self.log_to_suggested_orders_area("Processing selected orders...")
+        processed_order_ids = []
+        failed_material_ids = []
+
+        # Ensure suppliers_df is loaded (it should be from __init__)
+        if self.suppliers_df is None or self.suppliers_df.empty:
+            self.log_to_suggested_orders_area("Error: Suppliers data not loaded. Cannot process orders.")
+            QMessageBox.critical(self, "Error", "Suppliers data not loaded. Cannot process orders.")
+            return
+
+        for i in range(self.suggested_orders_table.rowCount()):
+            checkbox_item = self.suggested_orders_table.item(i, 0)
+            if checkbox_item and checkbox_item.checkState() == Qt.CheckState.Checked:
+                try:
+                    material_id = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('MaterialID')).text()
+                    material_name = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('MaterialName')).text()
+                    quantity_to_order_str = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('QuantityToOrder')).text()
+                    preferred_supplier_id = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('PreferredSupplierID')).text()
+                    unit_price_str = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('UnitPrice')).text()
+                    product_page_url = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('ProductPageURL')).text()
+
+                    quantity_to_order = float(quantity_to_order_str)
+                    unit_price = float(unit_price_str)
+
+                    order_item = {
+                        'MaterialID': material_id,
+                        'MaterialName': material_name,
+                        'QuantityToOrder': quantity_to_order,
+                        'UnitPrice': unit_price, # process_single_purchase_order expects 'UnitPrice'
+                        'ProductPageURL': product_page_url
+                        # CurrentStock & ReorderPoint are not strictly needed by process_single_purchase_order
+                    }
+
+                    supplier_info_series = self.suppliers_df[self.suppliers_df['SupplierID'] == preferred_supplier_id]
+                    if supplier_info_series.empty:
+                        self.log_to_suggested_orders_area(f"Error: SupplierID '{preferred_supplier_id}' for Material '{material_name}' not found in suppliers list.")
+                        failed_material_ids.append(material_id)
+                        continue
+
+                    supplier_info = supplier_info_series.iloc[0]
+
+                    self.log_to_suggested_orders_area(f"Processing order for MaterialID: {material_id} with Supplier: {supplier_info.get('SupplierName', preferred_supplier_id)}")
+
+                    # process_single_purchase_order returns: history_entry, processing_logs
+                    history_entry, processing_logs_list = process_single_purchase_order(order_item, supplier_info, logger_func=self.log_to_suggested_orders_area)
+                    # processing_logs_list is already handled by logger_func within process_single_purchase_order
+
+                    if history_entry:
+                        # log_order_to_history returns its own logs
+                        log_order_to_history(history_entry, logger_func=self.log_to_suggested_orders_area)
+                        processed_order_ids.append(history_entry['OrderID'])
+                    else:
+                        self.log_to_suggested_orders_area(f"Failed to process order for MaterialID: {material_id} (history entry was None).")
+                        failed_material_ids.append(material_id)
+
+                except Exception as e:
+                    mat_id_item = self.suggested_orders_table.item(i, self._suggested_orders_headers.index('MaterialID'))
+                    current_mat_id = mat_id_item.text() if mat_id_item else f"Row {i} (Unknown MatID)"
+                    self.log_to_suggested_orders_area(f"Error processing selected order for MaterialID {current_mat_id}: {e}")
+                    failed_material_ids.append(current_mat_id)
+
+        summary_message = []
+        if processed_order_ids:
+            summary_message.append(f"Successfully processed {len(processed_order_ids)} orders. OrderIDs: {', '.join(processed_order_ids)}")
+        if failed_material_ids:
+            summary_message.append(f"Failed to process orders for {len(failed_material_ids)} materials. MaterialIDs: {', '.join(failed_material_ids)}")
+
+        if not summary_message:
+            summary_message.append("No orders were selected or processed.")
+
+        final_summary = "\n".join(summary_message)
+        self.log_to_suggested_orders_area(f"\n--- Processing Summary ---")
+        self.log_to_suggested_orders_area(final_summary)
+        QMessageBox.information(self, "Processing Complete", final_summary)
+
+        self.display_suggested_orders() # Refresh suggestions
+        self.load_checkable_orders()    # Refresh check-in tab
 
     def setup_check_in_orders_tab(self):
         self.check_in_orders_tab = QWidget()
@@ -555,6 +708,9 @@ class ProcurementAppGUI(QMainWindow):
     # ... (other methods like flag_issue_action, receive_partial_action, etc. with their QMessageBox calls commented and logged)
 
     def load_checkable_orders(self):
+        # Ensure order_history_df is up-to-date
+        self.order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, parent_widget=self, create_if_missing=True)
+
         log_file_path = "checkin_debug_log.txt"
         self.checkin_log_area.clear()
         message_variable = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Loading checkable orders..."
