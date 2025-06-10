@@ -708,56 +708,65 @@ class ProcurementAppGUI(QMainWindow):
     # ... (other methods like flag_issue_action, receive_partial_action, etc. with their QMessageBox calls commented and logged)
 
     def load_checkable_orders(self):
+        # Clear log area at the very beginning
+        if hasattr(self, 'checkin_log_area') and self.checkin_log_area: # Ensure it exists
+            self.checkin_log_area.clear()
+        else: # Should not happen if setup_check_in_orders_tab ran correctly
+            print("Warning: checkin_log_area not found at start of load_checkable_orders.")
+
         # Ensure order_history_df is up-to-date
         self.order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, parent_widget=self, create_if_missing=True)
 
-        log_file_path = "checkin_debug_log.txt"
-        self.checkin_log_area.clear()
-        message_variable = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Loading checkable orders..."
+        # Diagnostic logging for self.order_history_df
+        self.checkin_log_area.append(f"--- Diagnostic: order_history_df (after loading) ---")
+        self.checkin_log_area.append(f"Shape: {self.order_history_df.shape}")
+        self.checkin_log_area.append(f"Columns: {self.order_history_df.columns.tolist()}")
+        self.checkin_log_area.append("Head:\n" + self.order_history_df.head().to_string())
+        if 'Status' in self.order_history_df.columns:
+            self.checkin_log_area.append(f"Unique Statuses in loaded df: {self.order_history_df['Status'].unique().tolist()}")
+        else:
+            self.checkin_log_area.append("'Status' column NOT found in loaded df.")
+        self.checkin_log_area.append("--- End of order_history_df diagnostic dump ---")
+        QApplication.processEvents()
+
+        log_file_path = "checkin_debug_log.txt" # This remains for external file logging if still desired
+        message_variable = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: Loading checkable orders (after initial df dump)..."
         try:
-            with open(log_file_path, "a", encoding="utf-8") as f_log:
+            with open(log_file_path, "a", encoding="utf-8") as f_log: # Still log to file
                 f_log.write(f"{message_variable}\n")
         except Exception as e_log:
             print(f"Failed to write to checkin_debug_log.txt: {e_log}")
-        self.checkin_log_area.append(message_variable)
+        self.checkin_log_area.append(message_variable) # Also log this message to GUI
 
         if self.order_history_df is None or self.order_history_df.empty:
-            message_variable = "Order history is empty or not loaded."
+            message_variable = "Order history is empty or not loaded after diagnostic dump."
+            self.checkin_log_area.append(message_variable)
             try:
-                with open(log_file_path, "a", encoding="utf-8") as f_log:
+                with open(log_file_path, "a", encoding="utf-8") as f_log: # Log to file
                     f_log.write(f"{message_variable}\n")
             except Exception as e_log:
                 print(f"Failed to write to checkin_debug_log.txt: {e_log}")
-            self.checkin_log_area.append(message_variable)
             self.checkin_orders_table.setRowCount(0)
             return
 
-        # New detailed logging starts here (Corrected Indentation)
-        current_time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-        detailed_log_entries = []
-        detailed_log_entries.append(f"[DETAIL {current_time_str}] order_history_df available. Shape: {self.order_history_df.shape}")
-        detailed_log_entries.append(f"[DETAIL {current_time_str}] First 3 rows of order_history_df:\n{self.order_history_df.head(3).to_string()}")
+        # Bypass Status Filtering for testing - display ALL orders
+        # relevant_orders_df = self.order_history_df[
+        #     self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
+        # ].copy()
+        relevant_orders_df = self.order_history_df.copy()
 
-        if 'Status' in self.order_history_df.columns:
-            detailed_log_entries.append(f"[DETAIL {current_time_str}] Unique statuses in order_history_df['Status'] before filtering: {list(self.order_history_df['Status'].unique())}")
-            status_match_series = self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
-            detailed_log_entries.append(f"[DETAIL {current_time_str}] Count of rows matching status criteria ('Ordered', 'Partially Received'): {status_match_series.sum()}")
-            detailed_log_entries.append(f"[DETAIL {current_time_str}] First 5 values of status_match_series:\n{status_match_series.head(5).to_string()}")
+        # Diagnostic logging for relevant_orders_df (now an unfiltered copy)
+        self.checkin_log_area.append(f"--- Diagnostic: relevant_orders_df (unfiltered copy) ---")
+        self.checkin_log_area.append(f"Shape: {relevant_orders_df.shape}")
+        self.checkin_log_area.append("Head:\n" + relevant_orders_df.head().to_string())
+        if not relevant_orders_df.empty and 'Status' in relevant_orders_df.columns:
+            self.checkin_log_area.append(f"Unique Statuses in relevant_orders_df: {relevant_orders_df['Status'].unique().tolist()}")
+        elif relevant_orders_df.empty:
+            self.checkin_log_area.append("relevant_orders_df is empty.")
         else:
-            detailed_log_entries.append(f"[DETAIL {current_time_str}] 'Status' column NOT FOUND in order_history_df. Columns are: {self.order_history_df.columns.tolist()}")
-
-        resolved_log_file_path = log_file_path # Assuming log_file_path is defined earlier in the function
-        for entry in detailed_log_entries:
-            try:
-                with open(resolved_log_file_path, "a", encoding="utf-8") as f_log:
-                    f_log.write(entry + "\n")
-            except Exception as e_detailed_log:
-                print(f"Failed to write detailed log to {resolved_log_file_path}: {e_detailed_log} - Log content: {entry}")
-        # New detailed logging ends here
-
-        relevant_orders_df = self.order_history_df[
-            self.order_history_df['Status'].isin(['Ordered', 'Partially Received'])
-        ].copy()
+            self.checkin_log_area.append("'Status' column not found in relevant_orders_df.")
+        self.checkin_log_area.append("--- End of relevant_orders_df diagnostic dump ---")
+        QApplication.processEvents()
 
         filter_text = self.checkin_filter_edit.text().strip()
         if filter_text:
