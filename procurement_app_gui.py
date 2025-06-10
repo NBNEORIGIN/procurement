@@ -154,7 +154,40 @@ class ProcurementAppGUI(QMainWindow):
         self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders")
         gen_ord_layout = QVBoxLayout(self.generate_orders_tab)
         # ... (rest of __init__ method)
+
+        self.setup_check_in_orders_tab() # Setup for Check-In Orders Tab
         self.load_checkable_orders() # Initial load
+
+    def setup_check_in_orders_tab(self):
+        self.check_in_orders_tab = QWidget()
+        self.main_tabs.addTab(self.check_in_orders_tab, "Check-In Orders")
+        check_in_layout = QVBoxLayout(self.check_in_orders_tab)
+
+        # Filter
+        self.checkin_filter_edit = QLineEdit()
+        self.checkin_filter_edit.setPlaceholderText("Filter by OrderID...")
+        # self.checkin_filter_edit.textChanged.connect(self.load_checkable_orders) # Connect later if needed
+        check_in_layout.addWidget(self.checkin_filter_edit)
+
+        # Table
+        self.checkin_orders_table_cols = ['Select', 'OrderID', 'MaterialID', 'MaterialName', 'QuantityOrdered', 'QuantityReceived', 'SupplierName', 'Status', 'OriginalIndex']
+        self.checkin_orders_table = QTableWidget()
+        self.checkin_orders_table.setColumnCount(len(self.checkin_orders_table_cols))
+        self.checkin_orders_table.setHorizontalHeaderLabels(self.checkin_orders_table_cols)
+        # self.checkin_orders_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu) # For context menu
+        # self.checkin_orders_table.customContextMenuRequested.connect(self.show_context_menu_checkin) # Connect later
+        check_in_layout.addWidget(self.checkin_orders_table)
+
+        # Action buttons
+        self.checkin_receive_selected_btn = QPushButton("Receive Selected")
+        # self.checkin_receive_selected_btn.clicked.connect(self.handle_checkin_selected_orders) # Connect later
+        self.checkin_receive_selected_btn.setEnabled(False) # Initially disabled
+        check_in_layout.addWidget(self.checkin_receive_selected_btn)
+
+        # Log Area
+        self.checkin_log_area = QTextEdit()
+        self.checkin_log_area.setReadOnly(True)
+        check_in_layout.addWidget(self.checkin_log_area)
 
     # ... (other methods like flag_issue_action, receive_partial_action, etc. with their QMessageBox calls commented and logged)
 
