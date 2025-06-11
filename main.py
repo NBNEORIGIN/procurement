@@ -47,18 +47,50 @@ def load_csv_to_dataframe(file_path, expected_headers, create_if_missing=False):
     return pd.DataFrame(columns=expected_headers)
 
 def append_to_csv(df_to_append, file_path, expected_headers):
-    # Ensure the DataFrame to append has all expected columns in the correct order
-    df_ready_to_append = pd.DataFrame(columns=expected_headers)
-    for col in expected_headers:
-        if col in df_to_append.columns:
-            df_ready_to_append[col] = df_to_append[col]
-        else:
-            df_ready_to_append[col] = None # Or appropriate default like ""
+    # df_to_append is expected to be a DataFrame, typically with one row for new entries.
     
-    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
-        df_ready_to_append.to_csv(file_path, index=False, header=True)
-    else:
-        df_ready_to_append.to_csv(file_path, index=False, header=False, mode='a')
+    # Create a new DataFrame that only includes columns from expected_headers
+    # and in that specific order.
+    df_for_csv = pd.DataFrame(columns=expected_headers)
+
+    if not df_to_append.empty:
+        # For a single row DataFrame (common case for new history entries)
+        # This logic assumes df_to_append often comes as a single-row DataFrame.
+        # It constructs a list of dictionaries, then a DataFrame, which is robust.
+        rows_list = []
+        for i in range(len(df_to_append)):
+            row_data = {}
+            for col in expected_headers:
+                if col in df_to_append.columns:
+                    row_data[col] = df_to_append.iloc[i].get(col)
+                else:
+                    # Set default for missing columns
+                    if col == 'QuantityReceived':
+                        row_data[col] = '0'
+                    elif col == 'DateReceived' or col == 'Notes':
+                        row_data[col] = ''
+                    # Add other column-specific defaults if necessary
+                    else:
+                        row_data[col] = pd.NA # Use pandas NA for missing values if appropriate for type, else '' or None
+            rows_list.append(row_data)
+
+        if rows_list:
+            df_for_csv = pd.DataFrame(rows_list, columns=expected_headers)
+
+    # Only write if there's data and all crucial columns (like OrderID) might be checked for presence if necessary
+    if not df_for_csv.empty:
+        # Ensure dtypes are consistent if necessary, though usually handled by to_csv with strings.
+        # For example, numeric fields if they were truly numeric in df_for_csv:
+        # df_for_csv['QuantityOrdered'] = pd.to_numeric(df_for_csv['QuantityOrdered'], errors='coerce').fillna(0)
+        # df_for_csv['UnitPricePaid'] = pd.to_numeric(df_for_csv['UnitPricePaid'], errors='coerce').fillna(0.0)
+        # df_for_csv['TotalPricePaid'] = pd.to_numeric(df_for_csv['TotalPricePaid'], errors='coerce').fillna(0.0)
+        # df_for_csv['QuantityReceived'] = pd.to_numeric(df_for_csv['QuantityReceived'], errors='coerce').fillna(0)
+
+
+        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+            df_for_csv.to_csv(file_path, index=False, header=True)
+        else:
+            df_for_csv.to_csv(file_path, index=False, header=False, mode='a')
 
 def generate_order_id():
     return f"PO-{datetime.now().strftime('%Y%m%d-%H%M%S%f')[:-3]}"
@@ -233,6 +265,7 @@ def process_single_purchase_order(order_item, supplier_info, logger_func=None):
     # This function now returns the history entry and the log of its own execution.
     # The actual logging to CSV is separated.
     log_message(f"--- Finished processing for item: {order_item['MaterialName']}. Status: {logged_method_status} ---")
+    log_message(f"DEBUG: Final history_entry before returning from process_single_purchase_order: {history_entry}")
     return history_entry, _processing_log_summary
 
 
