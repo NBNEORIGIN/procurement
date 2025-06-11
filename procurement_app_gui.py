@@ -717,8 +717,17 @@ class ProcurementAppGUI(QMainWindow):
         # Ensure order_history_df is up-to-date
         self.order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, parent_widget=self, create_if_missing=True)
 
+        # Clean 'Status' column immediately after loading
+        if 'Status' in self.order_history_df.columns:
+            self.checkin_log_area.append("Attempting to strip 'Status' column...") # Log before stripping
+            self.order_history_df['Status'] = self.order_history_df['Status'].astype(str).str.strip()
+            self.checkin_log_area.append("'Status' column stripped.") # Log after stripping
+        else:
+            self.checkin_log_area.append("Warning: 'Status' column not found in order_history_df immediately after loading, cannot strip whitespace.")
+        QApplication.processEvents() # Ensure these new logs are visible
+
         # Diagnostic logging for self.order_history_df
-        self.checkin_log_area.append(f"--- Diagnostic: order_history_df (after loading) ---")
+        self.checkin_log_area.append(f"--- Diagnostic: order_history_df (after loading and stripping 'Status') ---")
         self.checkin_log_area.append(f"Shape: {self.order_history_df.shape}")
         self.checkin_log_area.append(f"Columns: {self.order_history_df.columns.tolist()}")
         self.checkin_log_area.append("Head:\n" + self.order_history_df.head().to_string())
