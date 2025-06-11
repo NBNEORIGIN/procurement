@@ -383,6 +383,11 @@ class DataManagementWidget(QWidget):
         print("Connecting context menu signal...")
         self.materials_table_view.customContextMenuRequested.connect(self.show_materials_context_menu)
         print("Context menu signal connected")
+        self.materials_table_view.setEnabled(True)
+        self.materials_table_view.setVisible(True)
+        self.materials_table_view.viewport().setEnabled(True)
+        self.materials_table_view.viewport().setMouseTracking(True)
+        print("Materials table and viewport explicitly enabled, set visible, and mouse tracking on in __init__")
         
         # Add table to layout
         materials_tab_layout.addWidget(self.materials_table_view)
@@ -442,38 +447,37 @@ class DataManagementWidget(QWidget):
         """Show context menu for materials table"""
         print("\n--- Context menu requested ---")
         print(f"Position: {position}")
-        
+        print(f"Debug: Table isVisible: {self.materials_table_view.isVisible()}")
+        print(f"Debug: Table isEnabled: {self.materials_table_view.isEnabled()}")
+        print(f"Debug: Viewport isVisible: {self.materials_table_view.viewport().isVisible()}")
+        print(f"Debug: Viewport isEnabled: {self.materials_table_view.viewport().isEnabled()}")
         try:
-            menu = QMenu()
-            
+            menu = QMenu(self.materials_table_view)
+            print(f"Debug: Menu parent: {menu.parent()}")
+            print(f"Debug: Menu parent is materials_table_view: {menu.parent() == self.materials_table_view}")
+            target_row = self.materials_table_view.rowAt(position.y())
+            print(f"Target row for context menu: {target_row}")
+
             # Add actions
             insert_action = menu.addAction("Insert Row")
             delete_action = menu.addAction("Delete Row")
-            
-            # Get the current row under the cursor
-            row = self.materials_table_view.rowAt(position.y())
-            print(f"Row under cursor: {row}")
-            
+
+            # Connect actions
+            insert_action.triggered.connect(
+                lambda: self.insert_material_row(target_row if target_row != -1 else self.materials_table_view.rowCount())
+            )
+            delete_action.triggered.connect(self.delete_material_row)
+
             # If right-click is not on a row, disable delete action
-            if row == -1:
+            if target_row == -1:
                 delete_action.setEnabled(False)
                 print("No row under cursor - delete action disabled")
-            
+
             # Show the context menu
             print("Showing context menu...")
-            action = menu.exec(self.materials_table_view.viewport().mapToGlobal(position))
-            print(f"Action selected: {action}")
-            
-            # Handle the selected action
-            if action == insert_action:
-                print("Insert row action triggered")
-                self.insert_material_row(row if row != -1 else None)
-            elif action == delete_action and row != -1:
-                print("Delete row action triggered")
-                self.delete_material_row()
-            
-            print("Context menu handling complete")
-                
+            menu.popup(self.materials_table_view.viewport().mapToGlobal(position))
+            print("Context menu shown")
+
         except Exception as e:
             error_msg = f"Error in context menu: {str(e)}"
             print(error_msg)
@@ -632,6 +636,11 @@ class DataManagementWidget(QWidget):
             import traceback
             traceback.print_exc()
         finally:
+            self.materials_table_view.setEnabled(True)
+            self.materials_table_view.setVisible(True)
+            self.materials_table_view.viewport().setEnabled(True)
+            self.materials_table_view.viewport().setMouseTracking(True)
+            print("Materials table and viewport explicitly enabled, set visible, and mouse tracking on in refresh_materials_table")
             # Always unblock signals
             print("Unblocking signals...")
             self.materials_table_view.blockSignals(False)
