@@ -1,0 +1,830 @@
+[
+    {
+        "RawMaterial": "1 SHEET OF WHITE DOUBLE SIDED DIBOND AT 610 X1220",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "1 sheet of clear 5mm acrylic into thirds",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "1 sheet of gold dibond cut to 610x1220",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "1 sheet of silver dibond cut to 610 x 1220",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "1 sheet of white double sided dibond",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "1000mm x 600mm x 2mm BRASS",
+        "AverageDailyUsage": 11.11,
+        "LeadTimeDays": 7,
+        "SafetyStock": 155.56,
+        "ReorderPoint": 233.33,
+        "StandardOrderQuantity": 1000.0,
+        "PrimarySupplier": "TROTEC"
+    },
+    {
+        "RawMaterial": "10m Medium Sign Channel",
+        "AverageDailyUsage": 0.11,
+        "LeadTimeDays": 7,
+        "SafetyStock": 1.56,
+        "ReorderPoint": 2.33,
+        "StandardOrderQuantity": 10.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "13Kg gas bottle",
+        "AverageDailyUsage": 0.14,
+        "LeadTimeDays": 7,
+        "SafetyStock": 2.02,
+        "ReorderPoint": 3.03,
+        "StandardOrderQuantity": 13.0,
+        "PrimarySupplier": "Curry and Sons"
+    },
+    {
+        "RawMaterial": "1m x 1m x 10mm WHITE ACRYLIC",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "2 SHEETS OF BLACK 5MM ACRYLIC CUT INTO THIRDS",
+        "AverageDailyUsage": 0.02,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.31,
+        "ReorderPoint": 0.47,
+        "StandardOrderQuantity": 2.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "2 black 5mm acrylic sheets cut into thirds",
+        "AverageDailyUsage": 0.02,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.31,
+        "ReorderPoint": 0.47,
+        "StandardOrderQuantity": 2.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "2 sheets of black 5mm acrylic into thirds",
+        "AverageDailyUsage": 0.02,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.31,
+        "ReorderPoint": 0.47,
+        "StandardOrderQuantity": 2.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "3 8x2 white dibond sheets - FOR CLAYPORT JEWELLERS",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.47,
+        "ReorderPoint": 0.7,
+        "StandardOrderQuantity": 3.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "3 8x4 white dibond sheets",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.47,
+        "ReorderPoint": 0.7,
+        "StandardOrderQuantity": 3.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "3 SHEETS OF BLACK ACRYLIC",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.47,
+        "ReorderPoint": 0.7,
+        "StandardOrderQuantity": 3.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "3 SHEETS OF WHITE DIBOND 8X3",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.47,
+        "ReorderPoint": 0.7,
+        "StandardOrderQuantity": 3.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "4 CANS OF SPRAY ADHESIVE",
+        "AverageDailyUsage": 0.04,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.62,
+        "ReorderPoint": 0.93,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "Screwfix"
+    },
+    {
+        "RawMaterial": "4 cans of spray adhesive",
+        "AverageDailyUsage": 0.04,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.62,
+        "ReorderPoint": 0.93,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "Screwfix"
+    },
+    {
+        "RawMaterial": "4 sheets of white single sided dibond at 8x4",
+        "AverageDailyUsage": 0.04,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.62,
+        "ReorderPoint": 0.93,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "47KG Gas bottle",
+        "AverageDailyUsage": 0.52,
+        "LeadTimeDays": 7,
+        "SafetyStock": 7.31,
+        "ReorderPoint": 10.97,
+        "StandardOrderQuantity": 47.0,
+        "PrimarySupplier": "Curry and Sons"
+    },
+    {
+        "RawMaterial": "5 packs of cardboard sheets",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "5 sheets of single sided white dibond",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "5 sheets of white dibond at 8x4",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "500ml White MUTOH INK",
+        "AverageDailyUsage": 5.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 77.78,
+        "ReorderPoint": 116.67,
+        "StandardOrderQuantity": 500.0,
+        "PrimarySupplier": "GRAPHTECGB"
+    },
+    {
+        "RawMaterial": "50mm STANDOFFS",
+        "AverageDailyUsage": 0.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 7.78,
+        "ReorderPoint": 11.67,
+        "StandardOrderQuantity": 50.0,
+        "PrimarySupplier": "Amazon"
+    },
+    {
+        "RawMaterial": "800ml CYAN MUTOH INK",
+        "AverageDailyUsage": 8.89,
+        "LeadTimeDays": 7,
+        "SafetyStock": 124.44,
+        "ReorderPoint": 186.67,
+        "StandardOrderQuantity": 800.0,
+        "PrimarySupplier": "GRAPHTECGB"
+    },
+    {
+        "RawMaterial": "800ml Varnish",
+        "AverageDailyUsage": 8.89,
+        "LeadTimeDays": 7,
+        "SafetyStock": 124.44,
+        "ReorderPoint": 186.67,
+        "StandardOrderQuantity": 800.0,
+        "PrimarySupplier": "GRAPHTECGB"
+    },
+    {
+        "RawMaterial": "A4 BOARD BACKED ENVELOPES",
+        "AverageDailyUsage": 0.18,
+        "LeadTimeDays": 7,
+        "SafetyStock": 2.49,
+        "ReorderPoint": 3.73,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "A4 Poly Pockets",
+        "AverageDailyUsage": 0.04,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.62,
+        "ReorderPoint": 0.93,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "Amazon"
+    },
+    {
+        "RawMaterial": "A4 board backed envelops",
+        "AverageDailyUsage": 2.82,
+        "LeadTimeDays": 7,
+        "SafetyStock": 39.51,
+        "ReorderPoint": 59.27,
+        "StandardOrderQuantity": 127.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "A4 paper",
+        "AverageDailyUsage": 0.04,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.62,
+        "ReorderPoint": 0.93,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "Amazon"
+    },
+    {
+        "RawMaterial": "A6 Mailers x 2000",
+        "AverageDailyUsage": 0.07,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.93,
+        "ReorderPoint": 1.4,
+        "StandardOrderQuantity": 6.0,
+        "PrimarySupplier": "Amazon"
+    },
+    {
+        "RawMaterial": "A6 mailers",
+        "AverageDailyUsage": 0.13,
+        "LeadTimeDays": 7,
+        "SafetyStock": 1.87,
+        "ReorderPoint": 2.8,
+        "StandardOrderQuantity": 6.0,
+        "PrimarySupplier": "Amazon"
+    },
+    {
+        "RawMaterial": "BOARD BACKED A4",
+        "AverageDailyUsage": 5.6,
+        "LeadTimeDays": 7,
+        "SafetyStock": 78.4,
+        "ReorderPoint": 117.6,
+        "StandardOrderQuantity": 252.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "Black 5mm acrylic cut into thirds",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "Black dibond - 8x4",
+        "AverageDailyUsage": 0.09,
+        "LeadTimeDays": 7,
+        "SafetyStock": 1.24,
+        "ReorderPoint": 1.87,
+        "StandardOrderQuantity": 8.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "Black hips 1.5mm cut into 610 x 1220 sheets",
+        "AverageDailyUsage": 0.02,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.23,
+        "ReorderPoint": 0.35,
+        "StandardOrderQuantity": 1.5,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "CNC BIT 1mm",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "RENNIE"
+    },
+    {
+        "RawMaterial": "CNC BITS 2.5mm",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.39,
+        "ReorderPoint": 0.58,
+        "StandardOrderQuantity": 2.5,
+        "PrimarySupplier": "RENNIE"
+    },
+    {
+        "RawMaterial": "CNC bits - 2.5MM, 1.5MM, Engracing pieces",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.39,
+        "ReorderPoint": 0.58,
+        "StandardOrderQuantity": 2.5,
+        "PrimarySupplier": "Rennie Tools"
+    },
+    {
+        "RawMaterial": "Cable Display Kit A1 / 3 Panel / Landscape",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "Display Wizard"
+    },
+    {
+        "RawMaterial": "Copper Sheet C106 2mm",
+        "AverageDailyUsage": 1.18,
+        "LeadTimeDays": 7,
+        "SafetyStock": 16.49,
+        "ReorderPoint": 24.73,
+        "StandardOrderQuantity": 106.0,
+        "PrimarySupplier": "Metal Supermarkets"
+    },
+    {
+        "RawMaterial": "Copper Sub",
+        "AverageDailyUsage": 0.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 7.78,
+        "ReorderPoint": 11.67,
+        "StandardOrderQuantity": 50.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "D2C tool",
+        "AverageDailyUsage": 0.07,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.93,
+        "ReorderPoint": 1.4,
+        "StandardOrderQuantity": 2.0,
+        "PrimarySupplier": "Zen Stores"
+    },
+    {
+        "RawMaterial": "EPSON 24INCH PAPER X2 ROLLS",
+        "AverageDailyUsage": 0.27,
+        "LeadTimeDays": 7,
+        "SafetyStock": 3.73,
+        "ReorderPoint": 5.6,
+        "StandardOrderQuantity": 24.0,
+        "PrimarySupplier": "COLOURBYTE"
+    },
+    {
+        "RawMaterial": "Gas, Electricity, Water (water 54.00)",
+        "AverageDailyUsage": 1.8,
+        "LeadTimeDays": 7,
+        "SafetyStock": 25.2,
+        "ReorderPoint": 37.8,
+        "StandardOrderQuantity": 54.0,
+        "PrimarySupplier": "Utilities"
+    },
+    {
+        "RawMaterial": "Gold Sub",
+        "AverageDailyUsage": 1.11,
+        "LeadTimeDays": 7,
+        "SafetyStock": 15.56,
+        "ReorderPoint": 23.33,
+        "StandardOrderQuantity": 100.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Gold sub",
+        "AverageDailyUsage": 0.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 7.78,
+        "ReorderPoint": 11.67,
+        "StandardOrderQuantity": 50.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Gold sub 0.48",
+        "AverageDailyUsage": 0.72,
+        "LeadTimeDays": 7,
+        "SafetyStock": 10.11,
+        "ReorderPoint": 15.17,
+        "StandardOrderQuantity": 32.5,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Lime Green 5mm Acrylic",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "Mutoh White - 500ml",
+        "AverageDailyUsage": 5.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 77.78,
+        "ReorderPoint": 116.67,
+        "StandardOrderQuantity": 500.0,
+        "PrimarySupplier": "GRAPHTECGB"
+    },
+    {
+        "RawMaterial": "Mutoh varnish -- 800ml",
+        "AverageDailyUsage": 8.89,
+        "LeadTimeDays": 7,
+        "SafetyStock": 124.44,
+        "ReorderPoint": 186.67,
+        "StandardOrderQuantity": 800.0,
+        "PrimarySupplier": "GRAPHTECGB"
+    },
+    {
+        "RawMaterial": "One sheet of black 5mm acrylic cut into thirds",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "One sheet of clear 5mm acrylic 1m x 1m",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "RAOUL BAGS - 4000",
+        "AverageDailyUsage": 44.44,
+        "LeadTimeDays": 7,
+        "SafetyStock": 622.22,
+        "ReorderPoint": 933.33,
+        "StandardOrderQuantity": 4000.0,
+        "PrimarySupplier": "Envelopes"
+    },
+    {
+        "RawMaterial": "Rates and rubbish (rates 125.00)",
+        "AverageDailyUsage": 4.17,
+        "LeadTimeDays": 7,
+        "SafetyStock": 58.33,
+        "ReorderPoint": 87.5,
+        "StandardOrderQuantity": 125.0,
+        "PrimarySupplier": "NCC"
+    },
+    {
+        "RawMaterial": "Replacement bags for Raoul - 160x 160 x 1000 bags to cover",
+        "AverageDailyUsage": 1.78,
+        "LeadTimeDays": 7,
+        "SafetyStock": 24.89,
+        "ReorderPoint": 37.33,
+        "StandardOrderQuantity": 160.0,
+        "PrimarySupplier": "Envelopes"
+    },
+    {
+        "RawMaterial": "Roland Magenta 500ml",
+        "AverageDailyUsage": 5.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 77.78,
+        "ReorderPoint": 116.67,
+        "StandardOrderQuantity": 500.0,
+        "PrimarySupplier": "Granthams GT Ltd"
+    },
+    {
+        "RawMaterial": "Roland white 220 ml",
+        "AverageDailyUsage": 2.44,
+        "LeadTimeDays": 7,
+        "SafetyStock": 34.22,
+        "ReorderPoint": 51.33,
+        "StandardOrderQuantity": 220.0,
+        "PrimarySupplier": "Granthams GT Ltd"
+    },
+    {
+        "RawMaterial": "SILVER SUB 0.48",
+        "AverageDailyUsage": 0.89,
+        "LeadTimeDays": 7,
+        "SafetyStock": 12.44,
+        "ReorderPoint": 18.67,
+        "StandardOrderQuantity": 80.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "SILVER SUB x 25 sheets",
+        "AverageDailyUsage": 0.28,
+        "LeadTimeDays": 7,
+        "SafetyStock": 3.89,
+        "ReorderPoint": 5.83,
+        "StandardOrderQuantity": 25.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "SIZE 1 KITE MAILERS",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "SIZE 3 JIFFYS",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.47,
+        "ReorderPoint": 0.7,
+        "StandardOrderQuantity": 3.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "SIZE 7 JIFFYS",
+        "AverageDailyUsage": 0.08,
+        "LeadTimeDays": 7,
+        "SafetyStock": 1.09,
+        "ReorderPoint": 1.63,
+        "StandardOrderQuantity": 7.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "Shipping",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "Sign Pro"
+    },
+    {
+        "RawMaterial": "Silver Dibond cut into 610x1220 panels",
+        "AverageDailyUsage": 6.78,
+        "LeadTimeDays": 7,
+        "SafetyStock": 94.89,
+        "ReorderPoint": 142.33,
+        "StandardOrderQuantity": 610.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "Silver Sub",
+        "AverageDailyUsage": 2.22,
+        "LeadTimeDays": 7,
+        "SafetyStock": 31.11,
+        "ReorderPoint": 46.67,
+        "StandardOrderQuantity": 100.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Silver Sub x 75 sheets",
+        "AverageDailyUsage": 0.83,
+        "LeadTimeDays": 7,
+        "SafetyStock": 11.67,
+        "ReorderPoint": 17.5,
+        "StandardOrderQuantity": 75.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Silver dibond cut into 4 - 610x1220",
+        "AverageDailyUsage": 0.04,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.62,
+        "ReorderPoint": 0.93,
+        "StandardOrderQuantity": 4.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "Silver sub 0.48",
+        "AverageDailyUsage": 0.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 7.78,
+        "ReorderPoint": 11.67,
+        "StandardOrderQuantity": 50.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Silver sub x 75 sheets",
+        "AverageDailyUsage": 0.83,
+        "LeadTimeDays": 7,
+        "SafetyStock": 11.67,
+        "ReorderPoint": 17.5,
+        "StandardOrderQuantity": 75.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Twine",
+        "AverageDailyUsage": 0.02,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.31,
+        "ReorderPoint": 0.47,
+        "StandardOrderQuantity": 2.0,
+        "PrimarySupplier": "Amazon"
+    },
+    {
+        "RawMaterial": "Vinyl Print",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "Sign Pro"
+    },
+    {
+        "RawMaterial": "Vinyl Print Beadnell",
+        "AverageDailyUsage": 0.02,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.31,
+        "ReorderPoint": 0.47,
+        "StandardOrderQuantity": 2.0,
+        "PrimarySupplier": "Sign Pro"
+    },
+    {
+        "RawMaterial": "Vinyl Print reverse white 3 x 2m",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "Sign Pro"
+    },
+    {
+        "RawMaterial": "WHITE SUB 0.48 x 25",
+        "AverageDailyUsage": 0.28,
+        "LeadTimeDays": 7,
+        "SafetyStock": 3.89,
+        "ReorderPoint": 5.83,
+        "StandardOrderQuantity": 25.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "WHITE SUB X 50 SHEETS",
+        "AverageDailyUsage": 0.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 7.78,
+        "ReorderPoint": 11.67,
+        "StandardOrderQuantity": 50.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "White MD3 gloss",
+        "AverageDailyUsage": 0.03,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.47,
+        "ReorderPoint": 0.7,
+        "StandardOrderQuantity": 3.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White MD5 vinyl",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White Sub",
+        "AverageDailyUsage": 0.28,
+        "LeadTimeDays": 7,
+        "SafetyStock": 3.89,
+        "ReorderPoint": 5.83,
+        "StandardOrderQuantity": 25.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "White dibond 8x4",
+        "AverageDailyUsage": 0.09,
+        "LeadTimeDays": 7,
+        "SafetyStock": 1.24,
+        "ReorderPoint": 1.87,
+        "StandardOrderQuantity": 8.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White dibond at 1867 x 1116",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White dibond at 1867 x 1120",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White dibond at 556 x 1384",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White dibond t 8x4",
+        "AverageDailyUsage": 0.09,
+        "LeadTimeDays": 7,
+        "SafetyStock": 1.24,
+        "ReorderPoint": 1.87,
+        "StandardOrderQuantity": 8.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "White mutoh ink - 500ml - emailed 020425",
+        "AverageDailyUsage": 5.56,
+        "LeadTimeDays": 7,
+        "SafetyStock": 77.78,
+        "ReorderPoint": 116.67,
+        "StandardOrderQuantity": 500.0,
+        "PrimarySupplier": "GRAPHTECGB"
+    },
+    {
+        "RawMaterial": "White sub",
+        "AverageDailyUsage": 0.28,
+        "LeadTimeDays": 7,
+        "SafetyStock": 3.89,
+        "ReorderPoint": 5.83,
+        "StandardOrderQuantity": 25.0,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "Yellow Ink Mimaki - 1 litre",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.16,
+        "ReorderPoint": 0.23,
+        "StandardOrderQuantity": 1.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "black 5mm acrylic cut into thirds - 3 sheets",
+        "AverageDailyUsage": 0.06,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.78,
+        "ReorderPoint": 1.17,
+        "StandardOrderQuantity": 5.0,
+        "PrimarySupplier": "First Fix Plastics"
+    },
+    {
+        "RawMaterial": "silver sub 0.48 x 50 sheets",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.07,
+        "ReorderPoint": 0.11,
+        "StandardOrderQuantity": 0.48,
+        "PrimarySupplier": "Novachrome"
+    },
+    {
+        "RawMaterial": "size 3 kite mailers",
+        "AverageDailyUsage": 4.44,
+        "LeadTimeDays": 7,
+        "SafetyStock": 62.22,
+        "ReorderPoint": 93.33,
+        "StandardOrderQuantity": 400.0,
+        "PrimarySupplier": "Kite Packaging"
+    },
+    {
+        "RawMaterial": "white sub 0.48 x 25",
+        "AverageDailyUsage": 0.01,
+        "LeadTimeDays": 7,
+        "SafetyStock": 0.07,
+        "ReorderPoint": 0.11,
+        "StandardOrderQuantity": 0.48,
+        "PrimarySupplier": "Novachrome"
+    }
+]
