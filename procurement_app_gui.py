@@ -1,10 +1,184 @@
 import sys
+import os
+import io
 import pandas as pd
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QLabel, QFormLayout,
     QMessageBox, QComboBox, QSpinBox, QTextEdit, QHeaderView, QDoubleSpinBox,
-    QGroupBox, QCheckBox, QMenu, QStatusBar, QAbstractItemView
+    QGroupBox, QCheckBox, QMenu, QStatusBar, QAbstractItemView, QSplitter
+)
+from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSignal, pyqtSlot, QMutex, QMetaObject, Q_ARG
+from PyQt6.QtGui import QDesktopServices, QIntValidator
+
+class QTextEditLogger(QObject):
+    def __init__(self, text_edit):
+        print("Initializing QTextEditLogger...")  # Debug print
+        try:
+            super().__init__()
+            print("  - QObject initialized")
+            
+            if not text_edit:
+                raise ValueError("TextEdit widget cannot be None")
+                
+            self.text_edit = text_edit
+            self.buffer = ''
+            self._mutex = QMutex()
+            print("  - Instance variables initialized")
+            print("QTextEditLogger initialized successfully")  # Debug print
+        except Exception as e:
+            print(f"  - ERROR in QTextEditLogger.__init__: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
+        
+    def write(self, message):
+        try:
+            if not message or not hasattr(self, 'text_edit') or not self.text_edit:
+                return
+                
+            # Ensure we're working with a string
+            if not isinstance(message, str):
+                message = str(message)
+                
+            self._mutex.lock()
+            try:
+                self.buffer += message
+                if '\n' in self.buffer:
+                    lines = self.buffer.split('\n')
+                    for line in lines[:-1]:
+                        if line:  # Don't append empty lines
+                            self.text_append(line)
+                    self.buffer = lines[-1]
+            finally:
+                self._mutex.unlock()
+        except Exception as e:
+            print(f"Error in QTextEditLogger.write: {e}")
+    
+    def flush(self):
+        try:
+            self._mutex.lock()
+            if self.buffer and hasattr(self, 'text_edit') and self.text_edit:
+                self.text_append(self.buffer)
+                self.buffer = ''
+        except Exception as e:
+            print(f"Error in QTextEditLogger.flush: {e}")
+        finally:
+            self._mutex.unlock()
+    
+    def text_append(self, text):
+        try:
+            if not hasattr(self, 'text_edit') or not self.text_edit:
+                return
+                
+            # Use a queued connection to ensure thread safety
+            QMetaObject.invokeMethod(self.text_edit, 'append', 
+                                   Qt.ConnectionType.QueuedConnection,
+                                   Q_ARG(str, text))
+                                   
+            # Scroll to bottom
+            scroll_bar = self.text_edit.verticalScrollBar()
+            if scroll_bar:
+                QMetaObject.invokeMethod(scroll_bar, 'setValue',
+                                       Qt.ConnectionType.QueuedConnection,
+                                       Q_ARG(int, scroll_bar.maximum()))
+        except Exception as e:
+            print(f"Error in text_append: {e}")
+
+class DebugConsole(QWidget):
+    def __init__(self, parent=None):
+        print("  - Initializing DebugConsole...")
+        try:
+            super().__init__(parent)
+            print("    - Parent initialized")
+            
+            # Create layout
+            self.layout = QVBoxLayout()
+            self.setLayout(self.layout)
+            print("    - Layout created")
+            
+            # Create a text edit for debug output
+            print("    - Creating debug output widget...")
+            self.debug_output = QTextEdit()
+            self.debug_output.setReadOnly(True)
+            print("    - Debug output widget created")
+            
+            # Set style sheet
+            try:
+                print("    - Setting stylesheet...")
+                self.debug_output.setStyleSheet("""
+                    QTextEdit {
+                        background-color: #1e1e1e;
+                        color: #f0f0f0;
+                        font-family: Consolas, 'Courier New', monospace;
+                        font-size: 10pt;
+                        border: 1px solid #444;
+                        border-radius: 4px;
+                        padding: 4px;
+                    }
+                """)
+                print("    - Stylesheet set")
+            except Exception as e:
+                print(f"    - WARNING: Could not set stylesheet: {e}")
+            
+            # Create clear button
+            print("    - Creating clear button...")
+            clear_btn = QPushButton("Clear Console")
+            clear_btn.clicked.connect(self.debug_output.clear)
+            print("    - Clear button created and connected")
+            
+            # Add widgets to layout
+            print("    - Adding widgets to layout...")
+            self.layout.addWidget(QLabel("Debug Console"))
+            self.layout.addWidget(self.debug_output)
+            self.layout.addWidget(clear_btn)
+            print("    - Widgets added to layout")
+            
+            # Redirect stdout and stderr to our console
+            print("    - Setting up stdout/stderr redirection...")
+            try:
+                # Save original stdout/stderr
+                self.original_stdout = sys.stdout
+                self.original_stderr = sys.stderr
+                
+                # Create and set up logger
+                self.logger = QTextEditLogger(self.debug_output)
+                sys.stdout = self.logger
+                sys.stderr = self.logger
+                
+                # Test the logger
+                print("    - Testing debug console output...")
+                print("    - Stdout/stderr redirection complete")
+                print("  - DebugConsole initialization complete")
+                
+            except Exception as e:
+                print(f"    - ERROR setting up stdout/stderr redirection: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                # Restore original stdout/stderr on error
+                sys.stdout = self.original_stdout
+                sys.stderr = self.original_stderr
+                raise
+            
+        except Exception as e:
+            error_msg = f"ERROR in DebugConsole.__init__: {str(e)}"
+            print(error_msg)
+            import traceback
+            traceback.print_exc()
+            raise
+            
+    def closeEvent(self, event):
+        # Restore original stdout/stderr when closing
+        if hasattr(self, 'original_stdout'):
+            sys.stdout = self.original_stdout
+        if hasattr(self, 'original_stderr'):
+            sys.stderr = self.original_stderr
+        event.accept()
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
+    QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QLabel, QFormLayout,
+    QMessageBox, QComboBox, QSpinBox, QTextEdit, QHeaderView, QDoubleSpinBox,
+    QGroupBox, QCheckBox, QMenu, QStatusBar, QAbstractItemView, QSplitter
 )
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIntValidator
@@ -179,7 +353,6 @@ def load_or_create_dataframe_app(file_path, expected_headers, default_dtype=str,
         return pd.DataFrame(columns=expected_headers).astype(default_dtype).fillna('')
 
 class DataManagementWidget(QWidget):
-    # ... (Content of DataManagementWidget remains unchanged from its last correct state) ...
     def __init__(self, materials_df, suppliers_df, save_any_dataframe, refresh_preferred_supplier_dropdown_in_materials_tab, parent=None):
         super().__init__(parent)
         self.materials_df = materials_df
@@ -187,14 +360,42 @@ class DataManagementWidget(QWidget):
         self.save_any_dataframe = save_any_dataframe
         self.refresh_preferred_supplier_dropdown_in_materials_tab = refresh_preferred_supplier_dropdown_in_materials_tab
         main_layout = QVBoxLayout(self)
+        
         self.setLayout(main_layout)
         self.tabs = QTabWidget()
         main_layout.addWidget(self.tabs)
+        
+        # Setup materials tab
         self.materials_tab = QWidget()
         self.tabs.addTab(self.materials_tab, "Materials")
         materials_tab_layout = QVBoxLayout(self.materials_tab)
+        
+        # Initialize materials table
         self.materials_table_view = QTableWidget()
+        print("Table widget created")
+        
+        # Set up context menu policy before adding to layout
+        print("Setting up context menu policy...")
+        self.materials_table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        print(f"Context menu policy set: {self.materials_table_view.contextMenuPolicy()}")
+        
+        # Connect the custom context menu signal
+        print("Connecting context menu signal...")
+        self.materials_table_view.customContextMenuRequested.connect(self.show_materials_context_menu)
+        print("Context menu signal connected")
+        
+        # Add table to layout
         materials_tab_layout.addWidget(self.materials_table_view)
+        print("Table added to layout")
+        
+        # Make sure the table is editable
+        print("Setting up edit triggers...")
+        self.materials_table_view.setEditTriggers(
+            QTableWidget.EditTrigger.DoubleClicked | 
+            QTableWidget.EditTrigger.EditKeyPressed |
+            QTableWidget.EditTrigger.AnyKeyPressed
+        )
+        print(f"Edit triggers set: {self.materials_table_view.editTriggers()}")
         details_groupbox = QGroupBox("Material Details")
         form_layout = QFormLayout(details_groupbox)
         self.mat_id_edit = QLineEdit(); self.mat_id_edit.setReadOnly(True); form_layout.addRow("MaterialID*:", self.mat_id_edit)
@@ -237,13 +438,207 @@ class DataManagementWidget(QWidget):
         self.mat_pref_sup_combo.clear(); self.mat_pref_sup_combo.addItem("", None)
         if self.suppliers_df is not None and not self.suppliers_df.empty:
             for index, row in self.suppliers_df.iterrows(): self.mat_pref_sup_combo.addItem(f"{row['SupplierID']} : {row['SupplierName']}", row['SupplierID'])
-    def refresh_materials_table(self): # ...
-        if self.materials_df is None: print("Materials dataframe not available for refreshing table."); return
-        self.materials_table_view.setRowCount(0); self.materials_table_view.setColumnCount(len(MATERIALS_HEADERS)); self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS)
-        for r, rd in self.materials_df.iterrows():
-            self.materials_table_view.insertRow(r)
-            for c, h in enumerate(MATERIALS_HEADERS): self.materials_table_view.setItem(r, c, QTableWidgetItem(str(rd.get(h, ''))))
-        self.materials_table_view.resizeColumnsToContents(); self.materials_table_view.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers); self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows); self.materials_table_view.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+    def show_materials_context_menu(self, position):
+        """Show context menu for materials table"""
+        print("\n--- Context menu requested ---")
+        print(f"Position: {position}")
+        
+        try:
+            menu = QMenu()
+            
+            # Add actions
+            insert_action = menu.addAction("Insert Row")
+            delete_action = menu.addAction("Delete Row")
+            
+            # Get the current row under the cursor
+            row = self.materials_table_view.rowAt(position.y())
+            print(f"Row under cursor: {row}")
+            
+            # If right-click is not on a row, disable delete action
+            if row == -1:
+                delete_action.setEnabled(False)
+                print("No row under cursor - delete action disabled")
+            
+            # Show the context menu
+            print("Showing context menu...")
+            action = menu.exec(self.materials_table_view.viewport().mapToGlobal(position))
+            print(f"Action selected: {action}")
+            
+            # Handle the selected action
+            if action == insert_action:
+                print("Insert row action triggered")
+                self.insert_material_row(row if row != -1 else None)
+            elif action == delete_action and row != -1:
+                print("Delete row action triggered")
+                self.delete_material_row()
+            
+            print("Context menu handling complete")
+                
+        except Exception as e:
+            error_msg = f"Error in context menu: {str(e)}"
+            print(error_msg)
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error", error_msg)
+    
+    def insert_material_row(self, position=None):
+        """Insert a new row in the materials table at the specified position or at the end"""
+        try:
+            # If position is None or invalid, append to the end
+            if position is None or position < 0 or position > self.materials_table_view.rowCount():
+                position = self.materials_table_view.rowCount()
+            
+            # Insert the new row
+            self.materials_table_view.insertRow(position)
+            
+            # Add empty items to all columns
+            for col in range(self.materials_table_view.columnCount()):
+                item = QTableWidgetItem("")
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+                self.materials_table_view.setItem(position, col, item)
+            
+            # Select and scroll to the new row
+            self.materials_table_view.selectRow(position)
+            self.materials_table_view.scrollToItem(self.materials_table_view.item(position, 0))
+            
+            # Set focus to the first cell of the new row
+            if self.materials_table_view.item(position, 0):
+                self.materials_table_view.setCurrentCell(position, 0)
+            
+            # Save changes
+            self.save_materials_changes()
+            
+            # Return the new row index
+            return position
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to insert row: {str(e)}")
+            return -1
+    
+    def delete_material_row(self):
+        """Delete selected row from materials table"""
+        try:
+            current_row = self.materials_table_view.currentRow()
+            if current_row >= 0:
+                reply = QMessageBox.question(
+                    self, 'Delete Row',
+                    'Are you sure you want to delete this row?',
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No
+                )
+                
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.materials_table_view.removeRow(current_row)
+                    self.save_materials_changes()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to delete row: {str(e)}")
+    
+    def save_materials_changes(self):
+        """Save changes from the table back to the dataframe and CSV"""
+        try:
+            # Create a new dataframe from the table
+            rows = self.materials_table_view.rowCount()
+            cols = self.materials_table_view.columnCount()
+            
+            # Get headers
+            headers = []
+            for i in range(cols):
+                headers.append(self.materials_table_view.horizontalHeaderItem(i).text())
+            
+            # Get data
+            data = []
+            for row in range(rows):
+                row_data = []
+                for col in range(cols):
+                    item = self.materials_table_view.item(row, col)
+                    row_data.append(item.text() if item else "")
+                data.append(row_data)
+            
+            # Update the dataframe
+            self.materials_df = pd.DataFrame(data, columns=headers)
+            
+            # Save to CSV
+            self.save_any_dataframe(self.materials_df, 'materials_master.csv')
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save changes: {str(e)}")
+    
+    def refresh_materials_table(self):
+        """Refresh the materials table with data from the dataframe"""
+        print("\n--- Refreshing materials table ---")
+        
+        if self.materials_df is None:
+            print("Materials dataframe not available for refreshing table.")
+            return
+            
+        print(f"Found {len(self.materials_df)} materials to display")
+        
+        # Store current scroll position and selection
+        scroll_pos = self.materials_table_view.verticalScrollBar().value()
+        selected_row = self.materials_table_view.currentRow()
+        print(f"Stored scroll position: {scroll_pos}, selected row: {selected_row}")
+        
+        # Block signals to prevent selection changes during update
+        print("Blocking signals during update...")
+        self.materials_table_view.blockSignals(True)
+        
+        try:
+            print("Clearing existing table data...")
+            self.materials_table_view.clearContents()
+            self.materials_table_view.setRowCount(0)
+            self.materials_table_view.setColumnCount(len(MATERIALS_HEADERS))
+            self.materials_table_view.setHorizontalHeaderLabels(MATERIALS_HEADERS)
+            print(f"Set up table with {len(MATERIALS_HEADERS)} columns")
+            
+            # Set column resize modes
+            header = self.materials_table_view.horizontalHeader()
+            for i in range(len(MATERIALS_HEADERS)):
+                if i in [0, 1, 2, 3]:  # ID, Name, Category, UOM
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                else:
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+            
+            # Configure table properties for editing and context menu
+            self.materials_table_view.setEditTriggers(
+                QTableWidget.EditTrigger.DoubleClicked | 
+                QTableWidget.EditTrigger.EditKeyPressed |
+                QTableWidget.EditTrigger.AnyKeyPressed
+            )
+            self.materials_table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+            self.materials_table_view.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+            
+            print("Populating table with data...")
+            # Populate table
+            for r, rd in self.materials_df.iterrows():
+                row_position = self.materials_table_view.rowCount()
+                self.materials_table_view.insertRow(row_position)
+                
+                for c, h in enumerate(MATERIALS_HEADERS):
+                    item = QTableWidgetItem(str(rd.get(h, '')))
+                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+                    self.materials_table_view.setItem(row_position, c, item)
+            
+            print(f"Added {self.materials_table_view.rowCount()} rows to the table")
+            
+            # Restore scroll position and selection if possible
+            self.materials_table_view.verticalScrollBar().setValue(scroll_pos)
+            if 0 <= selected_row < self.materials_table_view.rowCount():
+                self.materials_table_view.selectRow(selected_row)
+            print(f"Restored scroll position to: {scroll_pos}, selected row: {selected_row}")
+            
+        except Exception as e:
+            print(f"Error refreshing table: {str(e)}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Always unblock signals
+            print("Unblocking signals...")
+            self.materials_table_view.blockSignals(False)
+        
+        # Ensure the viewport is properly updated
+        self.materials_table_view.viewport().update()
+        print("Table refresh complete\n")
     def on_material_selected(self): # ...
         si = self.materials_table_view.selectedItems(); sr = self.materials_table_view.currentRow()
         if not si or sr < 0 or sr >= len(self.materials_df): self.clear_material_form(); return
@@ -277,28 +672,72 @@ class DataManagementWidget(QWidget):
 class ProcurementAppGUI(QMainWindow):
     def __init__(self):
         print("Initializing ProcurementAppGUI...")
-        super().__init__()
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Python path: {sys.path}")
         
         try:
+            print("\n1. Creating QMainWindow...")
+            super().__init__()
             print("  - QMainWindow initialized")
             
+            print("\n2. Setting window properties...")
             self.setWindowTitle("Integrated Procurement Application")
             self.setGeometry(50, 50, 1200, 850)
             print("  - Window properties set")
 
-            print("  - Loading materials data...")
-            self.materials_df = load_or_create_dataframe_app(MATERIALS_FILE, MATERIALS_HEADERS, parent_widget=self, create_if_missing=True)
-            print(f"    - Loaded {len(self.materials_df)} materials")
+            print("\n3. Creating debug console...")
+            self.debug_console = DebugConsole()
+            print("  - Debug console created")
             
-            print("  - Loading suppliers data...")
-            self.suppliers_df = load_or_create_dataframe_app(SUPPLIERS_FILE, SUPPLIERS_HEADERS, parent_widget=self, create_if_missing=True)
-            print(f"    - Loaded {len(self.suppliers_df)} suppliers")
+            print("\n4. Loading materials data...")
+            try:
+                self.materials_df = load_or_create_dataframe_app(MATERIALS_FILE, MATERIALS_HEADERS, parent_widget=self, create_if_missing=True)
+                print(f"  - Successfully loaded {len(self.materials_df)} materials from {MATERIALS_FILE}")
+            except Exception as e:
+                print(f"  - ERROR loading materials: {str(e)}")
+                raise
             
-            # Initialize the rest of the UI
-            self.setup_ui()
+            print("\n5. Loading suppliers data...")
+            try:
+                self.suppliers_df = load_or_create_dataframe_app(SUPPLIERS_FILE, SUPPLIERS_HEADERS, parent_widget=self, create_if_missing=True)
+                print(f"  - Successfully loaded {len(self.suppliers_df)} suppliers from {SUPPLIERS_FILE}")
+            except Exception as e:
+                print(f"  - ERROR loading suppliers: {str(e)}")
+                raise
+            
+            print("\n6. Setting up UI...")
+            try:
+                self.setup_ui()
+                print("  - UI setup completed successfully")
+            except Exception as e:
+                print(f"  - ERROR in setup_ui: {str(e)}")
+                raise
+            
+            print("\n=== Application Initialized Successfully ===")
+            print(f"Python: {sys.version}")
+            try:
+                from PyQt6.QtCore import PYQT_VERSION_STR
+                print(f"PyQt6 version: {PYQT_VERSION_STR}")
+            except Exception as e:
+                print(f"Could not get PyQt6 version: {e}")
+            print("Ready for use!\n")
+            
+            # Force the debug console to be visible
+            self.debug_console.show()
             
         except Exception as e:
-            print(f"Error during ProcurementAppGUI initialization: {str(e)}")
+            error_msg = f"FATAL ERROR during initialization: {str(e)}"
+            print(f"\n{error_msg}")
+            import traceback
+            traceback.print_exc()
+            
+            # Try to show error in a message box if possible
+            try:
+                QMessageBox.critical(None, "Fatal Error", error_msg)
+            except:
+                print("Could not display error dialog")
+            
+            # Re-raise to ensure the application exits
             raise
             
     def setup_data_management_tab(self):
@@ -470,12 +909,25 @@ class ProcurementAppGUI(QMainWindow):
     
     def setup_ui(self):
         """Set up the main UI components"""
-        print("  - Setting up UI components...")
+        print("  - Setting up main UI...")
         
         try:
-            print("    - Creating main tab widget...")
-            self.main_tabs = QTabWidget()
+            # Create the main widget and layout
+            main_widget = QWidget()
+            main_layout = QVBoxLayout(main_widget)
             
+            # Create a splitter for main content and debug console
+            splitter = QSplitter(Qt.Orientation.Vertical)
+            
+            # Create container for the main content
+            content_widget = QWidget()
+            content_layout = QVBoxLayout(content_widget)
+            
+            # Create tab widget for the main content
+            self.main_tabs = QTabWidget()
+            content_layout.addWidget(self.main_tabs)
+            
+            # Set up each tab with error handling
             try:
                 print("    - Setting up Data Management tab...")
                 self.data_management_tab = QWidget()
@@ -484,6 +936,8 @@ class ProcurementAppGUI(QMainWindow):
                 print("      - Data Management tab created successfully")
             except Exception as e:
                 print(f"      - Error creating Data Management tab: {str(e)}")
+                import traceback
+                print(traceback.format_exc())
                 raise
             
             try:
@@ -516,14 +970,23 @@ class ProcurementAppGUI(QMainWindow):
                 print(traceback.format_exc())
                 raise
             
-            print("    - Setting up main layout...")
-            main_layout = QVBoxLayout()
-            main_layout.addWidget(self.main_tabs)
+            # Add content widget and debug console to splitter
+            splitter.addWidget(content_widget)
+            splitter.addWidget(self.debug_console)
             
-            print("    - Creating central widget...")
-            central_widget = QWidget()
-            central_widget.setLayout(main_layout)
-            self.setCentralWidget(central_widget)
+            # Set initial sizes (70% for content, 30% for debug console)
+            splitter.setSizes([int(self.height() * 0.7), int(self.height() * 0.3)])
+            
+            # Add splitter to main layout
+            main_layout.addWidget(splitter)
+            
+            # Set the main widget
+            self.setCentralWidget(main_widget)
+            
+            # Set up status bar
+            self.statusBar = QStatusBar()
+            self.setStatusBar(self.statusBar)
+            self.statusBar.showMessage("Ready")
             
             print("  - UI setup completed successfully")
             
@@ -532,7 +995,7 @@ class ProcurementAppGUI(QMainWindow):
             print(error_msg)
             import traceback
             traceback.print_exc()
-            QMessageBox.critical(None, "UI Setup Error", error_msg)
+            QMessageBox.critical(self, "UI Setup Error", error_msg)
             raise
             
     def setup_order_processing_tab(self):
@@ -1421,38 +1884,70 @@ def initialize_application_data():
 
 if __name__ == '__main__':
     print("Starting application initialization...")
-    # Initialize required data files
-    try:
-        print("Initializing application data...")
-        initialize_application_data()
-        print("Application data initialized successfully")
-    except Exception as e:
-        print(f"Error during data initialization: {str(e)}")
-        raise
     
-    # Start the application
-    print("Creating QApplication instance...")
-    app = QApplication(sys.argv)
+    # Initialize QApplication first
+    print("1. Creating QApplication instance...")
     try:
-        print("Creating main application window...")
-        main_app_window = ProcurementAppGUI()
-        main_app_window.show()
-        sys.exit(app.exec())
+        app = QApplication(sys.argv)
+        print("  - QApplication created successfully")
     except Exception as e:
+        print(f"  - ERROR creating QApplication: {str(e)}")
+        sys.exit(1)
+    
+    # Initialize required data files
+    print("\n2. Initializing application data...")
+    try:
+        initialize_application_data()
+        print("  - Application data initialized successfully")
+    except Exception as e:
+        print(f"  - ERROR during data initialization: {str(e)}")
+        error_msg = f"Failed to initialize application data:\n{str(e)}"
+        QMessageBox.critical(None, "Initialization Error", error_msg)
+        sys.exit(1)
+    
+    # Create and show the main window
+    print("\n3. Creating main application window...")
+    try:
+        main_app_window = ProcurementAppGUI()
+        print("  - Main window created successfully")
+        
+        # Show the main window
+        print("  - Showing main window...")
+        main_app_window.show()
+        print("  - Main window shown")
+        
+        # Start the event loop
+        print("\nStarting application event loop...")
+        sys.exit(app.exec())
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"\nFATAL ERROR: {str(e)}")
+        print(f"Traceback:\n{error_trace}")
+        
         error_msg = f"""
-        Fatal error occurred while starting the application:
+        A fatal error occurred while starting the application:
         {str(e)}
         
         Please check the following:
         1. All required data files exist in the application directory
         2. You have the required permissions to read/write files
         3. All dependencies are installed (run 'pip install -r requirements.txt')
+        
+        Detailed error information has been printed to the console.
         """
-        error_dialog = QMessageBox()
-        error_dialog.setIcon(QMessageBox.Icon.Critical)
-        error_dialog.setWindowTitle("Application Error")
-        error_dialog.setText("Failed to start application")
-        error_dialog.setDetailedText(str(e))
-        error_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
-        error_dialog.exec()
+        
+        try:
+            error_dialog = QMessageBox()
+            error_dialog.setIcon(QMessageBox.Icon.Critical)
+            error_dialog.setWindowTitle("Application Error")
+            error_dialog.setText("Failed to start application")
+            error_dialog.setInformativeText(str(e))
+            error_dialog.setDetailedText(error_trace)
+            error_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+            error_dialog.exec()
+        except Exception as dialog_error:
+            print(f"Failed to show error dialog: {str(dialog_error)}")
+        
         sys.exit(1)
