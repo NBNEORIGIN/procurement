@@ -1911,13 +1911,11 @@ class ProcurementAppGUI(QMainWindow):
             insert_action = menu.addAction("Insert Row")
             delete_action = menu.addAction("Delete Row")
 
-            # Temporary connections for initial testing
+            # Connect actions to their handlers
             insert_action.triggered.connect(
-                lambda: print(f"Debug: 'Insert Row' action triggered for ProcurementAppGUI.materials_table. Target row: {target_row if target_row != -1 else self.materials_table.rowCount()}")
+                lambda: self.insert_gui_material_row(target_row)
             )
-            delete_action.triggered.connect(
-                lambda: print("Debug: 'Delete Row' action triggered for ProcurementAppGUI.materials_table.")
-            )
+            delete_action.triggered.connect(self.delete_gui_material_row)
 
             if target_row == -1:
                 delete_action.setEnabled(False)
@@ -1928,6 +1926,91 @@ class ProcurementAppGUI(QMainWindow):
 
         except Exception as e:
             print(f"Error in ProcurementAppGUI.show_materials_table_context_menu: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def insert_gui_material_row(self, target_row_index):
+        print(f"Debug: insert_gui_material_row called with target_row_index: {target_row_index}")
+        try:
+            if not hasattr(self, 'materials_df') or self.materials_df is None:
+                print("Error: self.materials_df does not exist or is None.")
+                QMessageBox.critical(self, "Error", "Materials data not loaded.")
+                return
+
+            # Create a new empty row as a DataFrame
+            new_row_data = {header: '' for header in MATERIALS_HEADERS}
+            # Potentially set a default MaterialID if your logic requires it, e.g., new_row_data['MaterialID'] = f"MAT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            new_row_df = pd.DataFrame([new_row_data], columns=MATERIALS_HEADERS)
+
+            current_row_count = len(self.materials_df)
+
+            # Determine actual insertion index
+            # If target_row_index is -1 (often from clicking empty space) or beyond current rows, append.
+            if target_row_index < 0 or target_row_index >= current_row_count:
+                insertion_point = current_row_count # Append
+            else:
+                insertion_point = target_row_index # Insert at specific position
+
+            if insertion_point == current_row_count: # Append
+                self.materials_df = pd.concat([self.materials_df, new_row_df], ignore_index=True)
+                print(f"Debug: Appended new row. New df length: {len(self.materials_df)}")
+            else: # Insert
+                df_part1 = self.materials_df.iloc[:insertion_point]
+                df_part2 = self.materials_df.iloc[insertion_point:]
+                self.materials_df = pd.concat([df_part1, new_row_df, df_part2], ignore_index=True)
+                print(f"Debug: Inserted new row at index {insertion_point}. New df length: {len(self.materials_df)}")
+
+            self.populate_materials_table() # Refresh the QTableWidget
+            print(f"Debug: مواد جدول refreshed after insertion.")
+
+            # Optionally, select the new row (or the row at insertion_point)
+            if insertion_point < self.materials_table.rowCount():
+                self.materials_table.selectRow(insertion_point)
+                self.materials_table.scrollToItem(self.materials_table.item(insertion_point, 0), QAbstractItemView.ScrollHint.PositionAtCenter)
+                print(f"Debug: Selected and scrolled to row {insertion_point}.")
+
+        except Exception as e:
+            print(f"Error in insert_gui_material_row: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to insert row: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    def delete_gui_material_row(self):
+        print("Debug: delete_gui_material_row called")
+        try:
+            if not hasattr(self, 'materials_table') or not hasattr(self, 'materials_df'):
+                print("Error: materials_table or materials_df not initialized.")
+                return
+
+            current_row = self.materials_table.currentRow()
+            if current_row < 0:
+                QMessageBox.information(self, "Delete Row", "No row selected to delete.")
+                return
+
+            # Confirmation dialog
+            reply = QMessageBox.question(self, 'Delete Material Row',
+                                         f"Are you sure you want to delete row {current_row + 1}?",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                         QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                if current_row < len(self.materials_df):
+                    # Drop from DataFrame by index
+                    self.materials_df.drop(index=current_row, inplace=True)
+                    self.materials_df.reset_index(drop=True, inplace=True) # Important to re-index
+                    print(f"Debug: Deleted row {current_row} from self.materials_df. New df length: {len(self.materials_df)}")
+
+                    self.populate_materials_table() # Refresh the QTableWidget
+                    print("Debug: مواد جدول refreshed after deletion.")
+                else:
+                    print(f"Error: Row index {current_row} out of bounds for materials_df (length {len(self.materials_df)}).")
+                    QMessageBox.critical(self, "Error", "Selected row index is out of bounds for the data source.")
+            else:
+                print("Debug: Deletion cancelled by user.")
+
+        except Exception as e:
+            print(f"Error in delete_gui_material_row: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Failed to delete row: {str(e)}")
             import traceback
             traceback.print_exc()
 
