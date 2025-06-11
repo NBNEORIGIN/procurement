@@ -717,17 +717,55 @@ class ProcurementAppGUI(QMainWindow):
         # Ensure order_history_df is up-to-date
         self.order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, parent_widget=self, create_if_missing=True)
 
-        # Clean 'Status' column immediately after loading
-        if 'Status' in self.order_history_df.columns:
-            self.checkin_log_area.append("Attempting to strip 'Status' column...") # Log before stripping
-            self.order_history_df['Status'] = self.order_history_df['Status'].astype(str).str.strip()
-            self.checkin_log_area.append("'Status' column stripped.") # Log after stripping
-        else:
-            self.checkin_log_area.append("Warning: 'Status' column not found in order_history_df immediately after loading, cannot strip whitespace.")
-        QApplication.processEvents() # Ensure these new logs are visible
+        # Initial Character Inspection Log
+        if not self.order_history_df.empty and 'Status' in self.order_history_df.columns and len(self.order_history_df['Status']) > 0 :
+            # Check if the first element exists and is not NaN, otherwise select first valid string
+            first_valid_status_idx = self.order_history_df['Status'].first_valid_index()
+            if first_valid_status_idx is not None:
+                first_status_val_before_strip = self.order_history_df['Status'].loc[first_valid_status_idx]
+                self.checkin_log_area.append(f"DEBUG: First status (before any strip/clean, len {len(str(first_status_val_before_strip))}): '{first_status_val_before_strip}'")
+                self.checkin_log_area.append(f"DEBUG: Chars (ASCII): {[ord(c) for c in str(first_status_val_before_strip)]}")
+                QApplication.processEvents()
+            else:
+                self.checkin_log_area.append("DEBUG: 'Status' column has no valid first element to inspect before strip.")
 
-        # Diagnostic logging for self.order_history_df
-        self.checkin_log_area.append(f"--- Diagnostic: order_history_df (after loading and stripping 'Status') ---")
+        # Apply Standard Strip
+        if 'Status' in self.order_history_df.columns:
+            self.checkin_log_area.append("Attempting to strip 'Status' column (standard strip)...")
+            self.order_history_df['Status'] = self.order_history_df['Status'].astype(str).str.strip()
+            self.checkin_log_area.append("'Status' column stripped (standard strip).")
+            if not self.order_history_df.empty:
+                 first_valid_status_idx_after_strip = self.order_history_df['Status'].first_valid_index()
+                 if first_valid_status_idx_after_strip is not None:
+                     first_status_val_after_strip = self.order_history_df['Status'].loc[first_valid_status_idx_after_strip]
+                     self.checkin_log_area.append(f"DEBUG: First status (after standard strip, len {len(str(first_status_val_after_strip))}): '{first_status_val_after_strip}'")
+                     self.checkin_log_area.append(f"DEBUG: Chars (ASCII): {[ord(c) for c in str(first_status_val_after_strip)]}")
+                 else:
+                    self.checkin_log_area.append("DEBUG: 'Status' column has no valid first element after standard strip.")
+            QApplication.processEvents()
+        else:
+            # This log was already present from previous step, kept for consistency
+            self.checkin_log_area.append("Warning: 'Status' column not found in order_history_df, cannot strip whitespace.")
+
+        # Apply Aggressive Cleaning (Force 'Ordered')
+        if 'Status' in self.order_history_df.columns:
+            self.checkin_log_area.append("Attempting aggressive 'Status' cleaning (forcing 'Ordered')...")
+            condition = self.order_history_df['Status'].str.contains("Ordered", case=False, na=False)
+            self.checkin_log_area.append(f"DEBUG: Rows where 'Status' contains 'Ordered' (case-insensitive): {condition.sum()}")
+            self.order_history_df.loc[condition, 'Status'] = "Ordered"
+            self.checkin_log_area.append("'Status' column aggressively cleaned (forced 'Ordered' where applicable).")
+            if not self.order_history_df.empty:
+                 first_valid_status_idx_after_agg = self.order_history_df['Status'].first_valid_index()
+                 if first_valid_status_idx_after_agg is not None:
+                     first_status_val_after_aggressive = self.order_history_df['Status'].loc[first_valid_status_idx_after_agg]
+                     self.checkin_log_area.append(f"DEBUG: First status (after aggressive clean, len {len(str(first_status_val_after_aggressive))}): '{first_status_val_after_aggressive}'")
+                     self.checkin_log_area.append(f"DEBUG: Chars (ASCII): {[ord(c) for c in str(first_status_val_after_aggressive)]}")
+                 else:
+                    self.checkin_log_area.append("DEBUG: 'Status' column has no valid first element after aggressive clean.")
+            QApplication.processEvents()
+
+        # Diagnostic logging for self.order_history_df (title updated)
+        self.checkin_log_area.append(f"--- Diagnostic: order_history_df (after loading and ALL cleaning) ---")
         self.checkin_log_area.append(f"Shape: {self.order_history_df.shape}")
         self.checkin_log_area.append(f"Columns: {self.order_history_df.columns.tolist()}")
         self.checkin_log_area.append("Head:\n" + self.order_history_df.head().to_string())
