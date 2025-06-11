@@ -7,7 +7,7 @@ SMTP_SERVER = os.environ.get('PROCUREMENT_SMTP_SERVER', 'smtp.ionos.co.uk') # Ex
 SMTP_PORT = int(os.environ.get('PROCUREMENT_SMTP_PORT', 465)) # Example: 587 for TLS, 465 for SSL
 SMTP_SENDER_EMAIL = os.environ.get('PROCUREMENT_SMTP_SENDER_EMAIL', 'orders@nbnesigns.com')
 # IMPORTANT: Use environment variables or a secure method for the password
-SMTP_SENDER_PASSWORD = os.environ.get('PROCUREMENT_SMTP_PASSWORD', '!49Monkswood')
+SMTP_SENDER_PASSWORD = os.environ.get('PROCUREMENT_SMTP_PASSWORD', 'xxxMonkswood')
 SMTP_USE_TLS = os.environ.get('PROCUREMENT_SMTP_USE_TLS', 'True').lower() == 'true' # Use TLS by default
 
 # --- Company Configuration (from previous version) ---
