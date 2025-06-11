@@ -806,6 +806,21 @@ class ProcurementAppGUI(QMainWindow):
         ])
         self.materials_table.horizontalHeader().setStretchLastSection(True)
         
+        # Setup context menu for self.materials_table
+        self.materials_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        print("Debug: ProcurementAppGUI.materials_table.setContextMenuPolicy(CustomContextMenu) called")
+
+        self.materials_table.customContextMenuRequested.connect(self.show_materials_table_context_menu)
+        print(f"Debug: ProcurementAppGUI.materials_table.customContextMenuRequested connected to {self.show_materials_table_context_menu}")
+        # For a more detailed check of the signal object, though the above is usually sufficient:
+        # print(f"Debug: Signal object: {self.materials_table.customContextMenuRequested}")
+
+        # Apply FocusPolicy and Viewport Attributes to self.materials_table
+        self.materials_table.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.materials_table.viewport().setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.materials_table.viewport().setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        print("Debug: Applied FocusPolicy and Viewport Attributes to ProcurementAppGUI.materials_table")
+
         # Add materials to table
         self.populate_materials_table()
         
@@ -1878,6 +1893,43 @@ class ProcurementAppGUI(QMainWindow):
         print("Refreshing preferred supplier dropdown (placeholder action)")
         # Actual logic would involve accessing UI elements, which is complex for a placeholder
         pass
+
+    def show_materials_table_context_menu(self, position):
+        print("Debug: ProcurementAppGUI.show_materials_table_context_menu called at global position:", self.materials_table.mapToGlobal(position))
+
+        try:
+            # Ensure self.materials_table exists, otherwise this method makes no sense
+            if not hasattr(self, 'materials_table'):
+                print("Error: self.materials_table not found in ProcurementAppGUI")
+                return
+
+            menu = QMenu(self.materials_table) # Parent to the correct table instance
+
+            target_row = self.materials_table.rowAt(position.y())
+            print(f"Debug: Target row in self.materials_table for context menu: {target_row}")
+
+            insert_action = menu.addAction("Insert Row")
+            delete_action = menu.addAction("Delete Row")
+
+            # Temporary connections for initial testing
+            insert_action.triggered.connect(
+                lambda: print(f"Debug: 'Insert Row' action triggered for ProcurementAppGUI.materials_table. Target row: {target_row if target_row != -1 else self.materials_table.rowCount()}")
+            )
+            delete_action.triggered.connect(
+                lambda: print("Debug: 'Delete Row' action triggered for ProcurementAppGUI.materials_table.")
+            )
+
+            if target_row == -1:
+                delete_action.setEnabled(False)
+                print("Debug: No row under cursor in self.materials_table - delete action disabled")
+
+            menu.popup(self.materials_table.viewport().mapToGlobal(position))
+            print("Debug: Context menu for ProcurementAppGUI.materials_table shown (popup called).")
+
+        except Exception as e:
+            print(f"Error in ProcurementAppGUI.show_materials_table_context_menu: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
 def initialize_application_data():
     """Initialize all required data files with proper structure if they don't exist"""
