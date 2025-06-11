@@ -20,6 +20,8 @@ def generate_order_id():
 MATERIALS_FILE = "materials_master.csv"
 SUPPLIERS_FILE = "suppliers.csv"
 ORDER_HISTORY_FILE = "order_history.csv"
+MATERIALS_RECEIVED_FILE = "materials_received.csv"
+MATERIALS_RECEIVED_HEADERS = ORDER_HISTORY_HEADERS
 
 MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 'CurrentStock',
                      'ReorderPoint', 'StandardOrderQuantity', 'PreferredSupplierID',
@@ -28,9 +30,6 @@ SUPPLIERS_HEADERS = ['SupplierID', 'SupplierName', 'ContactPerson', 'Email', 'Ph
 ORDER_HISTORY_HEADERS = ['OrderID', 'Timestamp', 'MaterialID', 'MaterialName', 'QuantityOrdered',
                          'UnitPricePaid', 'TotalPricePaid', 'SupplierID', 'SupplierName',
                          'OrderMethod', 'Status', 'QuantityReceived', 'DateReceived', 'Notes']
-
-MATERIALS_RECEIVED_FILE = "materials_received.csv"
-MATERIALS_RECEIVED_HEADERS = ORDER_HISTORY_HEADERS
 
 def get_int_val(val_str, default=0):
     try: return int(float(str(val_str))) if pd.notna(val_str) and str(val_str).strip() != '' else default
@@ -212,14 +211,15 @@ class ProcurementAppGUI(QMainWindow):
         self.generate_po_btn = QPushButton("Generate New Suggested POs")
         order_proc_layout.addWidget(self.generate_po_btn)
 
-        self.active_orders_table = QTableWidget()
+        self.active_orders_table = QTableWidget() # Renamed from suggested_orders_table
+        # _suggested_orders_headers will be defined in load_and_display_active_orders or as instance var if needed by more methods
         order_proc_layout.addWidget(self.active_orders_table)
 
         self.update_selected_orders_btn = QPushButton("Update Selected Orders")
         self.update_selected_orders_btn.setEnabled(False)
         order_proc_layout.addWidget(self.update_selected_orders_btn)
 
-        self.order_processing_log_area = QTextEdit()
+        self.order_processing_log_area = QTextEdit() # Renamed from suggested_orders_log_area
         self.order_processing_log_area.setReadOnly(True)
         self.order_processing_log_area.setFixedHeight(150)
         order_proc_layout.addWidget(self.order_processing_log_area)
