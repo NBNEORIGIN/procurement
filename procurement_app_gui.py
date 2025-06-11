@@ -20,6 +20,8 @@ def generate_order_id():
 MATERIALS_FILE = "materials_master.csv"
 SUPPLIERS_FILE = "suppliers.csv"
 ORDER_HISTORY_FILE = "order_history.csv"
+MATERIALS_RECEIVED_FILE = "materials_received.csv"
+MATERIALS_RECEIVED_HEADERS = ORDER_HISTORY_HEADERS
 
 MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 'CurrentStock',
                      'ReorderPoint', 'StandardOrderQuantity', 'PreferredSupplierID',
@@ -483,122 +485,192 @@ class ProcurementAppGUI(QMainWindow):
         self.data_management_widget = DataManagementWidget(self.materials_df,self.suppliers_df,self.save_any_dataframe,self.refresh_preferred_supplier_dropdown_in_materials_tab)
         self.main_tabs.addTab(self.data_management_widget, "Data Management Hub")
         
-        self.generate_orders_tab = QWidget(); self.main_tabs.addTab(self.generate_orders_tab, "Generate Orders")
-        gen_ord_layout = QVBoxLayout(self.generate_orders_tab)
+        # Renamed tab: "Generate Orders" becomes "Order Processing"
+        self.order_processing_tab = QWidget()
+        self.main_tabs.addTab(self.order_processing_tab, "Order Processing")
+        order_proc_layout = QVBoxLayout(self.order_processing_tab)
 
-        # New UI for Generate Orders Tab
-        self.refresh_suggested_orders_btn = QPushButton("Refresh Suggested Orders")
-        gen_ord_layout.addWidget(self.refresh_suggested_orders_btn)
+        # UI for the "Order Processing" tab
+        self.generate_po_btn = QPushButton("Generate New Suggested POs")
+        order_proc_layout.addWidget(self.generate_po_btn)
 
-        self.suggested_orders_table = QTableWidget()
-        # Define headers that main.py's main() will return for suggested orders
-        self._suggested_orders_headers = ['Select', 'MaterialID', 'MaterialName', 'CurrentStock', 'ReorderPoint', 'PreferredSupplierID', 'QuantityToOrder', 'UnitPrice', 'ProductPageURL']
-        self.suggested_orders_table.setColumnCount(len(self._suggested_orders_headers))
-        self.suggested_orders_table.setHorizontalHeaderLabels(self._suggested_orders_headers)
-        gen_ord_layout.addWidget(self.suggested_orders_table)
+        self.active_orders_table = QTableWidget() # Renamed from suggested_orders_table
+        # _suggested_orders_headers will be defined in load_and_display_active_orders or as instance var if needed by more methods
+        order_proc_layout.addWidget(self.active_orders_table)
 
-        self.process_selected_order_btn = QPushButton("Process Selected Orders")
-        self.process_selected_order_btn.setEnabled(False)
-        gen_ord_layout.addWidget(self.process_selected_order_btn)
+        self.update_selected_orders_btn = QPushButton("Update Selected Orders")
+        self.update_selected_orders_btn.setEnabled(False)
+        order_proc_layout.addWidget(self.update_selected_orders_btn)
 
-        self.suggested_orders_log_area = QTextEdit()
-        self.suggested_orders_log_area.setReadOnly(True)
-        self.suggested_orders_log_area.setFixedHeight(100)
-        gen_ord_layout.addWidget(self.suggested_orders_log_area)
+        self.order_processing_log_area = QTextEdit() # Renamed from suggested_orders_log_area
+        self.order_processing_log_area.setReadOnly(True)
+        self.order_processing_log_area.setFixedHeight(150)
+        order_proc_layout.addWidget(self.order_processing_log_area)
 
-        self.refresh_suggested_orders_btn.clicked.connect(self.display_suggested_orders)
-        self.process_selected_order_btn.clicked.connect(self.process_selected_orders)
-        self.suggested_orders_table.itemChanged.connect(self.update_process_button_state) # For checkbox changes
+        # Connections for new/repurposed UI
+        self.generate_po_btn.clicked.connect(self.trigger_po_generation)
+        self.active_orders_table.itemChanged.connect(self.update_active_orders_button_state)
+        self.update_selected_orders_btn.clicked.connect(self.handle_update_selected_orders)
 
-        # self.generate_orders_tab.setLayout(gen_ord_layout) # Already set
+        # self.order_processing_tab.setLayout(order_proc_layout) # Already set by QVBoxLayout constructor
 
         # ... (rest of __init__ method)
 
-        self.setup_check_in_orders_tab() # Setup for Check-In Orders Tab
-        self.load_checkable_orders() # Initial load
+        # self.setup_check_in_orders_tab() # Call to setup "Check-In Orders" tab removed
+        # self.load_checkable_orders() # This call is now replaced by the specific loader for the new tab
+        self.load_and_display_active_orders() # Initial load for the new tab
 
     # Note: log_to_order_generation_area and handle_order_generation might be removed or repurposed later
     # if they are no longer used by any active UI element. For now, they remain.
-    def log_to_order_generation_area(self, message):
-        # This method might be deprecated if suggested_orders_log_area is used exclusively for this tab's logging
-        if hasattr(self, 'order_generation_log_area') and self.order_generation_log_area is not None:
-             self.order_generation_log_area.append(str(message))
-             QApplication.processEvents()
-        else: # Fallback or if used by other processes that don't have a dedicated log area
-            print(f"Legacy log: {message}")
+    # log_to_suggested_orders_area is renamed to log_to_order_processing_area
+    # display_suggested_orders, update_process_button_state, process_selected_orders are being replaced/refactored.
 
-
-    def handle_order_generation(self):
-        # This method is currently not connected to any button in the redesigned UI.
-        # It might be removed or adapted if a "Process All" functionality is added later.
-        self.log_to_order_generation_area("Legacy handle_order_generation called (currently not connected to UI button)...")
-        try:
-            summary_report = generate_orders_main_logic(logger_func=self.log_to_order_generation_area)
-            self.log_to_order_generation_area("\nOrder generation process finished.")
-            QMessageBox.information(self, "Process Complete", "Legacy order generation process finished. See log for details.")
-            self.load_checkable_orders()
-        except Exception as e:
-            self.log_to_order_generation_area(f"\nAn error occurred during legacy order generation: {e}")
-            QMessageBox.critical(self, "Error", f"An error occurred during legacy order generation: {e}")
-
-    def log_to_suggested_orders_area(self, message):
-        self.suggested_orders_log_area.append(str(message))
-        QApplication.processEvents()
-
-    def display_suggested_orders(self):
-        self.suggested_orders_log_area.clear()
-        self.log_to_suggested_orders_area("Refreshing suggested orders...")
-
-        try:
-            # generate_orders_main_logic now returns just the list of suggestions
-            suggested_orders_list = generate_orders_main_logic(logger_func=self.log_to_suggested_orders_area)
-        except Exception as e:
-            self.log_to_suggested_orders_area(f"Error generating suggestions: {e}")
-            QMessageBox.critical(self, "Error", f"Error generating suggestions: {e}")
-            suggested_orders_list = []
-
-        self.suggested_orders_table.setRowCount(0)
-        # Headers are set in __init__, but good to ensure column count matches if headers definition changes
-        self.suggested_orders_table.setColumnCount(len(self._suggested_orders_headers))
-        self.suggested_orders_table.setHorizontalHeaderLabels(self._suggested_orders_headers)
-
-        for row_idx, item_data in enumerate(suggested_orders_list):
-            self.suggested_orders_table.insertRow(row_idx)
-
-            # CheckBox for 'Select' column
-            chkbox_item = QTableWidgetItem()
-            chkbox_item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-            chkbox_item.setCheckState(Qt.CheckState.Unchecked)
-            self.suggested_orders_table.setItem(row_idx, 0, chkbox_item) # Column 0 for 'Select'
-
-            # Populate other cells based on _suggested_orders_headers (skipping 'Select')
-            for col_idx, header_key in enumerate(self._suggested_orders_headers[1:], start=1):
-                value = item_data.get(header_key, '')
-                self.suggested_orders_table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
-
-        self.suggested_orders_table.resizeColumnsToContents()
-
-        if suggested_orders_list:
-            self.process_selected_order_btn.setEnabled(True)
-            self.log_to_suggested_orders_area(f"Found {len(suggested_orders_list)} suggested orders.")
+    def log_to_order_processing_area(self, message): # Renamed
+        if hasattr(self, 'order_processing_log_area') and self.order_processing_log_area:
+            self.order_processing_log_area.append(str(message))
+            QApplication.processEvents()
         else:
-            self.process_selected_order_btn.setEnabled(False)
-            self.log_to_suggested_orders_area("No suggested orders found.")
-        QMessageBox.information(self, "Refresh Complete", "Suggested orders list has been refreshed.")
+            print(f"OrderProcessingLog: {message}")
 
-    def update_process_button_state(self):
+    def trigger_po_generation(self): # New method (replaces old handle_order_generation)
+        self.log_to_order_processing_area("Starting New Suggested PO Generation...")
+        try:
+            # generate_orders_main_logic is the refactored main.main which now returns suggestions
+            # We expect this to potentially log using the passed logger and then we load active orders
+            _ = generate_orders_main_logic(logger_func=self.log_to_order_processing_area)
+            self.log_to_order_processing_area("Suggested PO generation logic finished.")
+            QMessageBox.information(self, "Process Complete", "Suggested PO generation logic finished. Refreshing active orders list.")
+        except Exception as e:
+            self.log_to_order_processing_area(f"An error occurred during PO generation: {e}")
+            QMessageBox.critical(self, "Error", f"An error occurred during PO generation: {e}")
+        finally:
+            self.load_and_display_active_orders() # Refresh the active orders table
+
+    def update_active_orders_button_state(self): # Renamed from update_process_button_state
         any_checked = False
-        for i in range(self.suggested_orders_table.rowCount()):
-            item = self.suggested_orders_table.item(i, 0) # Checkbox in column 0
-            if item and item.checkState() == Qt.CheckState.Checked:
-                any_checked = True
-                break
-        self.process_selected_order_btn.setEnabled(any_checked)
+        if hasattr(self, 'active_orders_table'):
+            for i in range(self.active_orders_table.rowCount()):
+                item = self.active_orders_table.item(i, 0)
+                if item and item.checkState() == Qt.CheckState.Checked:
+                    any_checked = True
+                    break
+        if hasattr(self, 'update_selected_orders_btn'):
+            self.update_selected_orders_btn.setEnabled(any_checked)
 
-    def process_selected_orders(self):
-        self.log_to_suggested_orders_area("Processing selected orders...")
-        processed_order_ids = []
-        failed_material_ids = []
+    def handle_update_selected_orders(self):
+        self.log_to_order_processing_area("Attempting to update selected orders...")
+
+        # Load the most current order history
+        # Note: self.order_history_df is loaded at app start. For multi-user or long-running app, reloading here is crucial.
+        # For this app's current structure, using self.order_history_df might be acceptable if operations are reasonably fast,
+        # but reloading guarantees consistency if the file could be changed externally or by other logic not yet accounted for.
+        # Let's use a fresh load for safety in this operation.
+        current_order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, parent_widget=self)
+        if current_order_history_df is None: # Should not happen with load_or_create_dataframe_app
+             self.log_to_order_processing_area("Critical error: Could not load order history for update.")
+             QMessageBox.critical(self, "Error", "Could not load order history data.")
+             return
+
+        processed_count = 0
+        failed_count = 0
+        archived_count = 0
+        updated_status_count = 0
+        received_orders_data = [] # For materials_received.csv
+
+        for r in range(self.active_orders_table.rowCount()):
+            select_checkbox = self.active_orders_table.cellWidget(r, self.active_orders_table_cols.index('Select'))
+            if isinstance(select_checkbox, QCheckBox) and select_checkbox.isChecked():
+                order_id_item = self.active_orders_table.item(r, self.active_orders_table_cols.index('OrderID'))
+                if not order_id_item:
+                    self.log_to_order_processing_area(f"Row {r}: Could not find OrderID. Skipping.")
+                    failed_count +=1
+                    continue
+
+                order_id = order_id_item.text()
+
+                status_combo = self.active_orders_table.cellWidget(r, self.active_orders_table_cols.index('Check-In Status'))
+                if not isinstance(status_combo, QComboBox):
+                    self.log_to_order_processing_area(f"Row {r}, OrderID {order_id}: Check-In Status ComboBox not found. Skipping.")
+                    failed_count +=1
+                    continue
+
+                new_status = status_combo.currentText()
+                if not new_status: # Empty string means no action selected
+                    self.log_to_order_processing_area(f"Row {r}, OrderID {order_id}: No new status selected. Skipping.")
+                    continue
+
+                order_indices = current_order_history_df.index[current_order_history_df['OrderID'] == order_id].tolist()
+                if not order_indices:
+                    self.log_to_order_processing_area(f"Error: OrderID '{order_id}' not found in current order history. Skipping update for this item.")
+                    failed_count += 1
+                    continue
+
+                # Assuming OrderID is unique, so taking the first found index
+                order_idx = order_indices[0]
+                original_order_data_for_received = current_order_history_df.loc[order_idx].to_dict()
+
+                if new_status == "Fully Received":
+                    self.log_to_order_processing_area(f"OrderID {order_id}: Marked as 'Fully Received'. Archiving and logging to received materials.")
+                    # Prepare for materials_received.csv
+                    # We might want to add 'DateReceivedActual' or similar here.
+                    # For now, the full row from order_history is used.
+                    received_orders_data.append(original_order_data_for_received)
+
+                    # Update status in the main order_history_df to "Archived"
+                    current_order_history_df.loc[order_idx, 'Status'] = "Archived" # Or "Received & Archived"
+                    current_order_history_df.loc[order_idx, 'DateReceived'] = datetime.now().strftime("%Y-%m-%d")
+                    # Optionally update QuantityReceived to match QuantityOrdered
+                    if 'QuantityOrdered' in current_order_history_df.columns and 'QuantityReceived' in current_order_history_df.columns:
+                        current_order_history_df.loc[order_idx, 'QuantityReceived'] = current_order_history_df.loc[order_idx, 'QuantityOrdered']
+                    archived_count += 1
+                    processed_count +=1
+                elif new_status in ["Partially Received", "Issue Reported", "Cancelled"]:
+                    self.log_to_order_processing_area(f"OrderID {order_id}: Status updated to '{new_status}'.")
+                    current_order_history_df.loc[order_idx, 'Status'] = new_status
+                    if new_status == "Cancelled": # Optionally clear received qty/date for cancelled
+                        current_order_history_df.loc[order_idx, 'QuantityReceived'] = '0'
+                        current_order_history_df.loc[order_idx, 'DateReceived'] = ''
+                    updated_status_count +=1
+                    processed_count +=1
+                else:
+                    self.log_to_order_processing_area(f"OrderID {order_id}: Unknown status '{new_status}' selected. No action taken.")
+                    failed_count +=1
+
+        # Save changes
+        if processed_count > 0:
+            try:
+                # Save the (potentially modified) order_history_df
+                current_order_history_df.to_csv(ORDER_HISTORY_FILE, index=False)
+                self.log_to_order_processing_area(f"Successfully updated '{ORDER_HISTORY_FILE}'.")
+                # Update the in-memory DataFrame for the main app
+                self.order_history_df = current_order_history_df.copy()
+
+                if received_orders_data:
+                    received_df = pd.DataFrame(received_orders_data)
+                    # Ensure columns match MATERIALS_RECEIVED_HEADERS before appending
+                    # For now, assuming MATERIALS_RECEIVED_HEADERS = ORDER_HISTORY_HEADERS
+                    append_to_csv(received_df, MATERIALS_RECEIVED_FILE, MATERIALS_RECEIVED_HEADERS)
+                    self.log_to_order_processing_area(f"Logged {len(received_orders_data)} orders to '{MATERIALS_RECEIVED_FILE}'.")
+
+            except Exception as e:
+                self.log_to_order_processing_area(f"Error saving file changes: {e}")
+                QMessageBox.critical(self, "File Save Error", f"Could not save changes to files: {e}")
+                # Revert in-memory df if save failed? For now, no.
+
+        summary_msg = f"Updates applied: {processed_count} order(s).\n"
+        if archived_count > 0: summary_msg += f"- Archived (as Fully Received): {archived_count}\n"
+        if updated_status_count > 0: summary_msg += f"- Status updated: {updated_status_count}\n"
+        if failed_count > 0: summary_msg += f"Failed to update: {failed_count} order(s).\n"
+        if processed_count == 0 and failed_count == 0 : summary_msg = "No orders selected or no valid new status chosen."
+
+        self.log_to_order_processing_area(summary_msg)
+        QMessageBox.information(self, "Update Complete", summary_msg)
+
+        self.load_and_display_active_orders() # Refresh the current tab
+
+    # display_suggested_orders is now effectively replaced by load_and_display_active_orders
+    # process_selected_orders is now handle_update_selected_orders
+    # Old log_to_order_generation_area and handle_order_generation are effectively deprecated.
 
         # Ensure suppliers_df is loaded (it should be from __init__)
         if self.suppliers_df is None or self.suppliers_df.empty:
@@ -849,7 +921,78 @@ class ProcurementAppGUI(QMainWindow):
         except Exception as e_log:
             print(f"Failed to write to checkin_debug_log.txt: {e_log}")
         self.checkin_log_area.append(message_variable)
-        self.update_checkin_action_buttons_state()
+        self.update_checkin_action_buttons_state() # This method will need to be adapted or removed if checkin_receive_selected_btn is removed
+
+    def load_and_display_active_orders(self):
+        if not hasattr(self, 'order_processing_log_area'): # Check if log area is initialized
+            print("Error: order_processing_log_area not initialized.")
+            return
+        self.order_processing_log_area.clear()
+        self.order_processing_log_area.append("Loading active orders...")
+        QApplication.processEvents()
+
+        current_order_history_df = load_or_create_dataframe_app(ORDER_HISTORY_FILE, ORDER_HISTORY_HEADERS, parent_widget=self)
+
+        # Clean 'Status' column
+        if 'Status' in current_order_history_df.columns:
+            self.order_processing_log_area.append("Attempting to strip 'Status' column...")
+            current_order_history_df['Status'] = current_order_history_df['Status'].astype(str).str.strip()
+            # Aggressive cleaning for "Ordered"
+            condition = current_order_history_df['Status'].str.contains("Ordered", case=False, na=False)
+            current_order_history_df.loc[condition, 'Status'] = "Ordered"
+            self.order_processing_log_area.append("'Status' column stripped and normalized for 'Ordered'.")
+        else:
+            self.order_processing_log_area.append("Warning: 'Status' column not found, cannot strip/normalize.")
+        QApplication.processEvents()
+
+        # Diagnostic Log for current_order_history_df
+        self.order_processing_log_area.append(f"--- Diagnostic: current_order_history_df (after loading & cleaning) ---")
+        self.order_processing_log_area.append(f"Shape: {current_order_history_df.shape}")
+        self.order_processing_log_area.append(f"Columns: {current_order_history_df.columns.tolist()}")
+        self.order_processing_log_area.append("Head:\n" + current_order_history_df.head().to_string())
+        if 'Status' in current_order_history_df.columns:
+            self.order_processing_log_area.append(f"Unique Statuses: {current_order_history_df['Status'].unique().tolist()}")
+        self.order_processing_log_area.append("--- End of current_order_history_df dump ---")
+        QApplication.processEvents()
+
+        display_df = current_order_history_df[current_order_history_df['Status'].isin(['Ordered', 'Partially Received'])].copy()
+
+        self.order_processing_log_area.append(f"--- Diagnostic: display_df (after filtering for 'Ordered', 'Partially Received') ---")
+        self.order_processing_log_area.append(f"Shape: {display_df.shape}")
+        self.order_processing_log_area.append("Head:\n" + display_df.head().to_string())
+        self.order_processing_log_area.append("--- End of display_df dump ---")
+        QApplication.processEvents()
+
+        self.active_orders_table_cols = ['Select', 'OrderID', 'MaterialName', 'QuantityOrdered', 'SupplierName', 'Status', 'Check-In Status']
+        self.active_orders_table.setRowCount(0) # Clear existing rows
+        self.active_orders_table.setColumnCount(len(self.active_orders_table_cols))
+        self.active_orders_table.setHorizontalHeaderLabels(self.active_orders_table_cols)
+
+        for row_idx, order_data in display_df.iterrows():
+            self.active_orders_table.insertRow(row_idx)
+
+            chkbox = QCheckBox()
+            chkbox.stateChanged.connect(self.update_active_orders_button_state)
+            self.active_orders_table.setCellWidget(row_idx, self.active_orders_table_cols.index('Select'), chkbox)
+
+            self.active_orders_table.setItem(row_idx, self.active_orders_table_cols.index('OrderID'), QTableWidgetItem(str(order_data.get('OrderID', ''))))
+            self.active_orders_table.setItem(row_idx, self.active_orders_table_cols.index('MaterialName'), QTableWidgetItem(str(order_data.get('MaterialName', ''))))
+            self.active_orders_table.setItem(row_idx, self.active_orders_table_cols.index('QuantityOrdered'), QTableWidgetItem(str(order_data.get('QuantityOrdered', ''))))
+            self.active_orders_table.setItem(row_idx, self.active_orders_table_cols.index('SupplierName'), QTableWidgetItem(str(order_data.get('SupplierName', ''))))
+            self.active_orders_table.setItem(row_idx, self.active_orders_table_cols.index('Status'), QTableWidgetItem(str(order_data.get('Status', ''))))
+
+            # Add QComboBox for 'Check-In Status'
+            status_combo = QComboBox()
+            status_combo_options = ["", "Fully Received", "Partially Received", "Issue Reported", "Cancelled"]
+            status_combo.addItems(status_combo_options)
+            # No pre-selection logic needed for now, defaults to ""
+            check_in_status_col_idx = self.active_orders_table_cols.index('Check-In Status')
+            self.active_orders_table.setCellWidget(row_idx, check_in_status_col_idx, status_combo)
+
+        self.active_orders_table.resizeColumnsToContents()
+        self.order_processing_log_area.append(f"Loaded {self.active_orders_table.rowCount()} active orders into the table.")
+        QApplication.processEvents()
+        self.update_active_orders_button_state()
 
     def update_checkin_action_buttons_state(self):
         any_selected = False
