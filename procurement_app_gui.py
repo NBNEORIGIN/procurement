@@ -383,11 +383,40 @@ class DataManagementWidget(QWidget):
         print("Connecting context menu signal...")
         self.materials_table_view.customContextMenuRequested.connect(self.show_materials_context_menu)
         print("Context menu signal connected")
+        print(f"Debug: customContextMenuRequested signal object: {self.materials_table_view.customContextMenuRequested}")
+        # The policy is set before connecting, this confirms it.
+        print(f"Debug: ContextMenuPolicy in __init__ (after connect): {self.materials_table_view.contextMenuPolicy().name}")
         self.materials_table_view.setEnabled(True)
         self.materials_table_view.setVisible(True)
         self.materials_table_view.viewport().setEnabled(True)
         self.materials_table_view.viewport().setMouseTracking(True)
         print("Materials table and viewport explicitly enabled, set visible, and mouse tracking on in __init__")
+        self.materials_table_view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.materials_table_view.viewport().setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.materials_table_view.viewport().setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        print("Debug: Applied FocusPolicy and Viewport Attributes in __init__")
+
+        # --- Start of mousePressEvent debugging code ---
+        def new_materials_table_mousePressEvent(widget_instance, event):
+            # Print basic event info
+            print(f"Debug: materials_table_view.mousePressEvent triggered. Button: {event.button()}, GlobalPos: {event.globalPosition()}")
+
+            # Specifically check for right-click
+            if event.button() == Qt.MouseButton.RightButton:
+                print(f"Debug: Right-click detected by instance_mousePressEvent on materials_table_view.")
+                print(f"  Debug: Table geometry: {widget_instance.geometry()}, isVisible: {widget_instance.isVisible()}")
+                print(f"  Debug: Viewport geometry: {widget_instance.viewport().geometry()}, isVisible: {widget_instance.viewport().isVisible()}")
+                # Also check custom context menu policy status here again
+                print(f"  Debug: Table ContextMenuPolicy at right-click: {widget_instance.contextMenuPolicy().name}")
+
+            # IMPORTANT: Call the original QTableWidget's mousePressEvent
+            # This ensures that normal table interactions (like selection) still work.
+            QTableWidget.mousePressEvent(widget_instance, event)
+
+        # Dynamically assign this new method to the instance of our table view
+        self.materials_table_view.mousePressEvent = new_materials_table_mousePressEvent.__get__(self.materials_table_view)
+        print("Debug: Dynamically assigned mousePressEvent to self.materials_table_view for debugging.")
+        # --- End of mousePressEvent debugging code ---
         
         # Add table to layout
         materials_tab_layout.addWidget(self.materials_table_view)
@@ -609,6 +638,7 @@ class DataManagementWidget(QWidget):
                 QTableWidget.EditTrigger.AnyKeyPressed
             )
             self.materials_table_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            print(f"Debug: ContextMenuPolicy after explicit set in refresh: {self.materials_table_view.contextMenuPolicy().name}")
             self.materials_table_view.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
             self.materials_table_view.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
             
@@ -641,6 +671,10 @@ class DataManagementWidget(QWidget):
             self.materials_table_view.viewport().setEnabled(True)
             self.materials_table_view.viewport().setMouseTracking(True)
             print("Materials table and viewport explicitly enabled, set visible, and mouse tracking on in refresh_materials_table")
+            self.materials_table_view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self.materials_table_view.viewport().setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self.materials_table_view.viewport().setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+            print("Debug: Re-applied FocusPolicy and Viewport Attributes in refresh_materials_table")
             # Always unblock signals
             print("Unblocking signals...")
             self.materials_table_view.blockSignals(False)
