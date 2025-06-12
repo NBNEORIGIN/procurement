@@ -200,7 +200,8 @@ MATERIALS_RECEIVED_FILE = "materials_received.csv"
 # Column headers for data files
 MATERIALS_HEADERS = ['MaterialID', 'MaterialName', 'Category', 'UnitOfMeasure', 'CurrentStock',
                    'ReorderPoint', 'StandardOrderQuantity', 'PreferredSupplierID',
-                   'ProductPageURL', 'LeadTimeDays', 'SafetyStockQuantity', 'Notes', 'CurrentPrice']
+                   'ProductPageURL', 'LeadTimeDays', 'SafetyStockQuantity', 'Notes', 'CurrentPrice',
+                   'MaterialOrderMethod', 'MaterialContactPerson']
 
 SUPPLIERS_HEADERS = ['SupplierID', 'SupplierName', 'ContactPerson', 'Email', 'Phone', 'Website', 'OrderMethod']
 
@@ -440,6 +441,11 @@ class DataManagementWidget(QWidget):
         self.mat_rop_spin = QSpinBox(); self.mat_rop_spin.setRange(0,999999); form_layout.addRow("Reorder Point:", self.mat_rop_spin)
         self.mat_soq_spin = QSpinBox(); self.mat_soq_spin.setRange(0,999999); form_layout.addRow("Std. Order Qty:", self.mat_soq_spin)
         self.mat_price_spin = QDoubleSpinBox(); self.mat_price_spin.setRange(0,99999.99); self.mat_price_spin.setDecimals(2); self.mat_price_spin.setPrefix("£"); form_layout.addRow("Current Price:", self.mat_price_spin)
+        self.mat_order_method_combo = QComboBox()
+        self.mat_order_method_combo.addItems(["", "Email", "Online Portal", "Phone"])
+        form_layout.addRow("Material Order Method:", self.mat_order_method_combo)
+        self.mat_contact_person_edit = QLineEdit()
+        form_layout.addRow("Material Contact Person:", self.mat_contact_person_edit)
         self.mat_pref_sup_combo = QComboBox(); form_layout.addRow("Preferred SupplierID:", self.mat_pref_sup_combo)
         self.mat_url_edit = QLineEdit(); form_layout.addRow("Product Page URL:", self.mat_url_edit)
         self.mat_lead_spin = QSpinBox(); self.mat_lead_spin.setRange(0,365); form_layout.addRow("Lead Time (Days):", self.mat_lead_spin)
@@ -687,12 +693,14 @@ class DataManagementWidget(QWidget):
         if not si or sr < 0 or sr >= len(self.materials_df): self.clear_material_form(); return
         md = self.materials_df.iloc[sr]; self.mat_id_edit.setText(str(md.get('MaterialID',''))); self.mat_name_edit.setText(str(md.get('MaterialName',''))); self.mat_cat_edit.setText(str(md.get('Category',''))); self.mat_uom_edit.setText(str(md.get('UnitOfMeasure','')))
         self.mat_stock_spin.setValue(get_int_val(md.get('CurrentStock',0))); self.mat_rop_spin.setValue(get_int_val(md.get('ReorderPoint',0))); self.mat_soq_spin.setValue(get_int_val(md.get('StandardOrderQuantity',0))); self.mat_price_spin.setValue(get_float_val(md.get('CurrentPrice',0.0)))
+        self.mat_order_method_combo.setCurrentText(str(md.get('MaterialOrderMethod','')))
+        self.mat_contact_person_edit.setText(str(md.get('MaterialContactPerson','')))
         ci = self.mat_pref_sup_combo.findData(str(md.get('PreferredSupplierID',''))); self.mat_pref_sup_combo.setCurrentIndex(ci if ci!=-1 else 0)
         self.mat_url_edit.setText(str(md.get('ProductPageURL',''))); self.mat_lead_spin.setValue(get_int_val(md.get('LeadTimeDays',0))); self.mat_safe_stock_spin.setValue(get_int_val(md.get('SafetyStockQuantity',0))); self.mat_notes_edit.setText(str(md.get('Notes','')))
     def clear_material_form(self): # ...
-        for w in [self.mat_id_edit, self.mat_name_edit, self.mat_cat_edit, self.mat_uom_edit, self.mat_url_edit, self.mat_notes_edit]: w.clear()
+        for w in [self.mat_id_edit, self.mat_name_edit, self.mat_cat_edit, self.mat_uom_edit, self.mat_url_edit, self.mat_notes_edit, self.mat_contact_person_edit]: w.clear() # Added self.mat_contact_person_edit
         for w in [self.mat_stock_spin, self.mat_rop_spin, self.mat_soq_spin, self.mat_lead_spin, self.mat_safe_stock_spin]: w.setValue(0)
-        self.mat_price_spin.setValue(0.0); self.mat_pref_sup_combo.setCurrentIndex(0); self.materials_table_view.clearSelection()
+        self.mat_price_spin.setValue(0.0); self.mat_pref_sup_combo.setCurrentIndex(0); self.mat_order_method_combo.setCurrentIndex(0); self.materials_table_view.clearSelection() # Added self.mat_order_method_combo
     def refresh_suppliers_table(self): # ...
         if self.suppliers_df is None: print("Suppliers dataframe not available for refreshing table."); return
         self.suppliers_table_view.setRowCount(0); self.suppliers_table_view.setColumnCount(len(SUPPLIERS_HEADERS)); self.suppliers_table_view.setHorizontalHeaderLabels(SUPPLIERS_HEADERS)
@@ -709,7 +717,65 @@ class DataManagementWidget(QWidget):
     def clear_supplier_form(self): # ...
         for w in [self.sup_id_edit, self.sup_name_edit, self.sup_contact_edit, self.sup_email_edit, self.sup_phone_edit, self.sup_website_edit]: w.clear()
         self.sup_order_method_combo.setCurrentIndex(0); self.suppliers_table_view.clearSelection()
-    def save_material_data(self): print(f"Save Material: {self.mat_id_edit.text()}"); # ...
+    def save_material_data(self):
+        try:
+            mat_id = self.mat_id_edit.text()
+            if not mat_id: # Check if MaterialID is present (it's read-only, so usually set by selection or add_new)
+                QMessageBox.warning(self, "Missing ID", "MaterialID is missing. Cannot save.")
+                return
+
+            data = {
+                'MaterialID': mat_id,
+                'MaterialName': self.mat_name_edit.text(),
+                'Category': self.mat_cat_edit.text(),
+                'UnitOfMeasure': self.mat_uom_edit.text(),
+                'CurrentStock': str(self.mat_stock_spin.value()),
+                'ReorderPoint': str(self.mat_rop_spin.value()),
+                'StandardOrderQuantity': str(self.mat_soq_spin.value()),
+                'CurrentPrice': str(self.mat_price_spin.value()),
+                'MaterialOrderMethod': self.mat_order_method_combo.currentText(),
+                'MaterialContactPerson': self.mat_contact_person_edit.text(),
+                'PreferredSupplierID': self.mat_pref_sup_combo.currentData() if self.mat_pref_sup_combo.currentIndex() > 0 else "",
+                'ProductPageURL': self.mat_url_edit.text(),
+                'LeadTimeDays': str(self.mat_lead_spin.value()),
+                'SafetyStockQuantity': str(self.mat_safe_stock_spin.value()),
+                'Notes': self.mat_notes_edit.toPlainText()
+            }
+
+            # Ensure all headers are present in the data dictionary, even if empty
+            for header in MATERIALS_HEADERS:
+                if header not in data:
+                    data[header] = ""
+
+            # Check if material ID exists
+            if self.materials_df['MaterialID'].astype(str).str.contains(str(mat_id)).any():
+                # Update existing row
+                idx = self.materials_df[self.materials_df['MaterialID'] == mat_id].index[0]
+                for header in MATERIALS_HEADERS: # Ensure all columns are updated
+                    self.materials_df.loc[idx, header] = data[header]
+                QMessageBox.information(self, "Success", f"Material {mat_id} updated successfully.")
+            else:
+                # Add new row - this case should ideally be handled by an "Add New" button that generates an ID
+                # For now, if mat_id is somehow new (e.g. form cleared, then filled manually without selecting)
+                # it might create a new record if the ID is unique.
+                # However, the current MaterialID field is read-only.
+                # A robust "add new" would generate a new ID.
+                # For simplicity here, we assume mat_id comes from selection or a (yet to be fully implemented) add process.
+                # If we strictly follow the "update existing or add new" based on ID:
+                new_material_df = pd.DataFrame([data], columns=MATERIALS_HEADERS)
+                self.materials_df = pd.concat([self.materials_df, new_material_df], ignore_index=True)
+                QMessageBox.information(self, "Success", f"Material {mat_id} added successfully.")
+
+            self.save_any_dataframe(self.materials_df, MATERIALS_FILE, MATERIALS_HEADERS)
+            self.refresh_materials_table()
+            # self.clear_material_form() # Optional: clear form after saving
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save material data: {str(e)}")
+            print(f"Error in save_material_data: {e}")
+            import traceback
+            traceback.print_exc()
+
     def save_supplier_data(self): print(f"Save Supplier: {self.sup_id_edit.text()}"); # ...
 
 class ProcurementAppGUI(QMainWindow):
