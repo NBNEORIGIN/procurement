@@ -631,11 +631,47 @@ class DataManagementWidget(QWidget):
             
             # Set column resize modes
             header = self.materials_table_view.horizontalHeader()
-            for i in range(len(MATERIALS_HEADERS)):
-                if i in [0, 1, 2, 3]:  # ID, Name, Category, UOM
+            column_stretch_applied = False
+            for i, header_label in enumerate(MATERIALS_HEADERS):
+                if header_label == 'MaterialID':
                     header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
-                else:
+                elif header_label == 'MaterialName':
                     header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+                    column_stretch_applied = True
+                elif header_label == 'Category':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'UnitOfMeasure':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'CurrentStock':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'ReorderPoint':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'StandardOrderQuantity':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'PreferredSupplierID':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'ProductPageURL':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+                elif header_label == 'LeadTimeDays':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'SafetyStockQuantity':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'Notes': # Notes is not a column, but if it were:
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.Stretch)
+                    column_stretch_applied = True
+                elif header_label == 'CurrentPrice':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'MaterialOrderMethod':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
+                elif header_label == 'MaterialContactPerson':
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+                else:
+                    # Default for any other columns, though all current ones are handled
+                    header.setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
+
+            # If no column was set to Stretch, make the last column stretch to fill space
+            if not column_stretch_applied and len(MATERIALS_HEADERS) > 0:
+                header.setSectionResizeMode(len(MATERIALS_HEADERS) - 1, QHeaderView.ResizeMode.Stretch)
             
             # Configure table properties for editing and context menu
             self.materials_table_view.setEditTriggers(
