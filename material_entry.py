@@ -48,8 +48,7 @@ class MaterialEntryWidget(QWidget):
         # Form fields
         self.type_edit = QLineEdit()
         self.name_edit = QLineEdit()
-        self.unit_combo = QComboBox()
-        self.unit_combo.addItems(["kg", "g", "L", "mL", "pcs", "m", "cm", "mm"])
+        self.unit_edit = QLineEdit() # Changed from QComboBox
         
         self.current_stock_spinbox = QDoubleSpinBox()
         self.current_stock_spinbox.setRange(0, 999999.99)
@@ -74,7 +73,7 @@ class MaterialEntryWidget(QWidget):
         # Add fields to form
         form_layout.addRow("Type*:", self.type_edit)
         form_layout.addRow("Name*:", self.name_edit)
-        form_layout.addRow("Unit*:", self.unit_combo)
+        form_layout.addRow("Unit*:", self.unit_edit) # Changed from self.unit_combo
         form_layout.addRow("Current Stock:", self.current_stock_spinbox)
         form_layout.addRow("Min Stock:", self.min_stock_spinbox)
         form_layout.addRow("Reorder Point:", self.reorder_point)
@@ -119,7 +118,7 @@ class MaterialEntryWidget(QWidget):
             errors.append("Type is required.")
         if not self.name_edit.text().strip():
             errors.append("Name is required.")
-        if not self.unit_combo.currentText():
+        if not self.unit_edit.text().strip(): # Changed from self.unit_combo.currentText()
             errors.append("Unit is required.")
             
         # Validate numeric fields
@@ -148,7 +147,7 @@ class MaterialEntryWidget(QWidget):
             material_data = (
                 self.type_edit.text().strip(),
                 self.name_edit.text().strip(),
-                self.unit_combo.currentText(),
+                self.unit_edit.text().strip(), # Changed from self.unit_combo.currentText()
                 self.current_stock_spinbox.value(),
                 self.min_stock_spinbox.value(),
                 self.reorder_point.value(),
@@ -196,7 +195,7 @@ class MaterialEntryWidget(QWidget):
         self.material_id = None
         self.type_edit.clear()
         self.name_edit.clear()
-        self.unit_combo.setCurrentIndex(0)
+        self.unit_edit.clear() # Changed from self.unit_combo.setCurrentIndex(0)
         self.current_stock_spinbox.setValue(0.0)
         self.min_stock_spinbox.setValue(0.0)
         self.reorder_point.setValue(0.0)
@@ -218,9 +217,7 @@ class MaterialEntryWidget(QWidget):
         self.name_edit.setText(material_data.get('name', ''))
         
         # Set unit
-        unit_index = self.unit_combo.findText(material_data.get('unit', ''))
-        if unit_index >= 0:
-            self.unit_combo.setCurrentIndex(unit_index)
+        self.unit_edit.setText(material_data.get('unit', '')) # Changed from QComboBox logic
             
         # Set numeric fields
         self.current_stock_spinbox.setValue(float(material_data.get('current_stock', 0)))

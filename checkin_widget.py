@@ -7,7 +7,12 @@ from PyQt6.QtCore import Qt, pyqtSignal, QDate
 from PyQt6.QtGui import QDoubleValidator
 
 from database import db
-from order_processing import receive_order, process_order # Added imports
+from order_processing import receive_order, process_order
+from analytics_functions import ( # Added imports for analytics
+    calculate_average_lead_time_per_material,
+    calculate_average_order_quantity_per_material,
+    count_recent_orders_per_material
+)
 
 # Set up logger
 logger = logging.getLogger('procurement.checkin')
@@ -22,7 +27,7 @@ class CheckInWidget(QWidget):
         super().__init__()
         self.setup_ui()
         self.setup_connections()
-        self.load_pending_orders()
+        self.refresh_all_views() # Changed from load_pending_orders to load both
     
     def setup_ui(self):
         """Set up the user interface."""
@@ -81,12 +86,70 @@ class CheckInWidget(QWidget):
         self.status_label = QLabel()
         self.status_label.setStyleSheet("color: green;")
         layout.addWidget(self.status_label)
+
+        # History Table
+        history_title_label = QLabel("Order History")
+        history_title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(history_title_label)
+
+        self.history_table = QTableWidget()
+        self.history_table.setColumnCount(7)
+        self.history_table.setHorizontalHeaderLabels([
+            "Order ID", "Material Name", "Order Date", "Ordered Qty",
+            "Processed?", "Total Received", "Overall Status"
+        ])
+        self.history_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.history_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.history_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.history_table.verticalHeader().setVisible(False)
+        self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.history_table.horizontalHeader().setStretchLastSection(True)
+
+        self.history_table.setColumnWidth(0, 70)
+        self.history_table.setColumnWidth(1, 200)
+        self.history_table.setColumnWidth(2, 120)
+        self.history_table.setColumnWidth(3, 90)
+        self.history_table.setColumnWidth(4, 90)
+        self.history_table.setColumnWidth(5, 100)
+        # Overall Status column (idx 6) will take remaining space or can be set explicitly
+        layout.addWidget(self.history_table)
+
+        # Analytics Table
+        analytics_title_label = QLabel("Stock Level Analytics")
+        analytics_title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(analytics_title_label)
+
+        self.analytics_table = QTableWidget()
+        self.analytics_table.setColumnCount(5)
+        self.analytics_table.setHorizontalHeaderLabels([
+            "Material ID", "Material Name", "Avg. Lead Time (Days)",
+            "Avg. Order Qty", "Orders (Last 90d)"
+        ])
+        self.analytics_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.analytics_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.analytics_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.analytics_table.verticalHeader().setVisible(False)
+        self.analytics_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        self.analytics_table.horizontalHeader().setStretchLastSection(True)
+
+        self.analytics_table.setColumnWidth(0, 80)  # Material ID
+        self.analytics_table.setColumnWidth(1, 250) # Material Name
+        self.analytics_table.setColumnWidth(2, 150) # Avg Lead Time
+        self.analytics_table.setColumnWidth(3, 120) # Avg Order Qty
+        # Orders (Last 90d) column (idx 4) can take remaining space
+
+        layout.addWidget(self.analytics_table)
     
     def setup_connections(self):
         """Set up signal-slot connections."""
-        self.refresh_btn.clicked.connect(self.load_pending_orders)
+        self.refresh_btn.clicked.connect(self.refresh_all_views) # Changed
         # self.process_btn.clicked.connect(self.process_checkins) # Removed
     
+    def refresh_all_views(self):
+        self.load_pending_orders()
+        self.load_order_history()
+        self.load_analytics_data() # New call
+
     def load_pending_orders(self):
         """Load orders, their processing status, and received quantities."""
         try:
@@ -186,8 +249,8 @@ class CheckInWidget(QWidget):
             success = process_order(order_id)
             if success:
                 QMessageBox.information(self, "Success", f"Order {order_id} marked as processed.")
-                self.load_pending_orders() # Refresh table
-                self.data_changed.emit()
+                self.refresh_all_views() # Refresh both tables in this widget
+                self.data_changed.emit() # Notify MainWindow
             else:
                 QMessageBox.warning(self, "Failed", f"Failed to process order {order_id}. See logs for details.")
         finally:
@@ -206,7 +269,7 @@ class CheckInWidget(QWidget):
             button.setEnabled(False)
         self.refresh_btn.setEnabled(False)
         self.table.setEnabled(False)
-        
+
         try:
             if not button: # Should not happen
                 logger.error("handle_add_receipt_button called without a sender.")
@@ -240,8 +303,8 @@ class CheckInWidget(QWidget):
             
             if success:
                 QMessageBox.information(self, "Success", f"Receipt added for order {order_id}.")
-                self.load_pending_orders() # Refresh table
-                self.data_changed.emit()
+                self.refresh_all_views() # Refresh both tables in this widget
+                self.data_changed.emit() # Notify MainWindow
             else:
                 QMessageBox.warning(self, "Failed", f"Failed to add receipt for order {order_id}. See logs for details.")
 
@@ -255,3 +318,113 @@ class CheckInWidget(QWidget):
             self.table.setEnabled(True)
             # Specific button re-enabling is complex due to table reload creating new button instances.
             # if button and button.parent(): button.setEnabled(True)
+
+    def load_order_history(self):
+        try:
+            self.history_table.setRowCount(0)
+            conn = db.get_connection()
+            cursor = conn.cursor()
+
+            # Query to get order details, material name, and total received quantity
+            cursor.execute('''
+                SELECT
+                    o.id,
+                    m.name AS material_name,
+                    o.order_date,
+                    o.order_qty,
+                    o.is_processed,
+                    COALESCE(SUM(r.received_qty), 0) AS total_received_qty
+                FROM orders o
+                JOIN materials m ON o.material_id = m.id
+                LEFT JOIN receipts r ON o.id = r.order_id
+                GROUP BY o.id, m.name, o.order_date, o.order_qty, o.is_processed
+                ORDER BY o.order_date DESC, o.id DESC
+            ''')
+            history_orders = cursor.fetchall()
+            conn.close()
+
+            for row_idx, order_data in enumerate(history_orders):
+                self.history_table.insertRow(row_idx)
+
+                order_id = order_data[0]
+                material_name = order_data[1]
+                order_date_str = str(order_data[2])
+                ordered_qty = float(order_data[3])
+                is_processed = order_data[4] == 1
+                total_received = float(order_data[5])
+
+                # Determine Overall Status
+                overall_status = ""
+                if total_received >= ordered_qty:
+                    overall_status = "Fully Received"
+                elif is_processed and total_received < ordered_qty and total_received > 0 :
+                    overall_status = "Partially Received"
+                elif is_processed and total_received == 0:
+                    overall_status = "Processed (No Receipts)"
+                elif not is_processed:
+                    overall_status = "Pending Processing"
+                else:
+                    overall_status = "Unknown"
+
+                self.history_table.setItem(row_idx, 0, QTableWidgetItem(str(order_id)))
+                self.history_table.setItem(row_idx, 1, QTableWidgetItem(material_name))
+                self.history_table.setItem(row_idx, 2, QTableWidgetItem(order_date_str.split(" ")[0]))
+                self.history_table.setItem(row_idx, 3, QTableWidgetItem(f"{ordered_qty:.2f}"))
+                self.history_table.setItem(row_idx, 4, QTableWidgetItem("Yes" if is_processed else "No"))
+                self.history_table.setItem(row_idx, 5, QTableWidgetItem(f"{total_received:.2f}"))
+                self.history_table.setItem(row_idx, 6, QTableWidgetItem(overall_status))
+
+            logger.debug(f"Loaded {len(history_orders)} orders into history view.")
+        except Exception as e:
+            logger.error(f"Failed to load order history: {e}", exc_info=True)
+            QMessageBox.critical(self, "Error", f"Failed to load order history: {str(e)}")
+
+    def load_analytics_data(self):
+        try:
+            self.analytics_table.setRowCount(0)
+
+            # Fetch raw analytics data
+            avg_lead_times = calculate_average_lead_time_per_material()
+            avg_order_qtys = calculate_average_order_quantity_per_material()
+            recent_order_counts = count_recent_orders_per_material(days=90)
+
+            # Need material names. Get all materials first.
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name FROM materials ORDER BY id")
+            materials_data = cursor.fetchall()
+            conn.close()
+
+            all_material_ids = set(m[0] for m in materials_data)
+            # Combine all known material IDs from analytics functions as well,
+            # in case a material exists in orders/receipts but not in materials table (data integrity issue)
+            all_material_ids.update(avg_lead_times.keys())
+            all_material_ids.update(avg_order_qtys.keys())
+            all_material_ids.update(recent_order_counts.keys())
+
+            material_info_map = {m[0]: m[1] for m in materials_data}
+
+            row_idx = 0
+            for material_id in sorted(list(all_material_ids)):
+                material_name = material_info_map.get(material_id, f"Unknown ID: {material_id}")
+
+                lead_time_val = avg_lead_times.get(material_id)
+                lead_time_str = f"{lead_time_val:.2f}" if lead_time_val is not None else "N/A"
+
+                order_qty_val = avg_order_qtys.get(material_id)
+                order_qty_str = f"{order_qty_val:.2f}" if order_qty_val is not None else "N/A"
+
+                recent_count_str = str(recent_order_counts.get(material_id, 0))
+
+                self.analytics_table.insertRow(row_idx)
+                self.analytics_table.setItem(row_idx, 0, QTableWidgetItem(str(material_id)))
+                self.analytics_table.setItem(row_idx, 1, QTableWidgetItem(material_name))
+                self.analytics_table.setItem(row_idx, 2, QTableWidgetItem(lead_time_str))
+                self.analytics_table.setItem(row_idx, 3, QTableWidgetItem(order_qty_str))
+                self.analytics_table.setItem(row_idx, 4, QTableWidgetItem(recent_count_str))
+                row_idx += 1
+
+            logger.debug(f"Loaded analytics data for {row_idx} materials.")
+        except Exception as e:
+            logger.error(f"Failed to load analytics data: {e}", exc_info=True)
+            QMessageBox.critical(self, "Error", f"Failed to load analytics data: {str(e)}")

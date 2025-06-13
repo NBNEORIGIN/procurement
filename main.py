@@ -21,6 +21,8 @@ class MainWindow(QMainWindow):
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QVBoxLayout(main_widget)
+        layout.setContentsMargins(10, 10, 10, 10) # Margins for main window layout
+        layout.setSpacing(10) # Spacing for main window layout
         
         # Create tab widget
         self.tabs = QTabWidget()
@@ -55,6 +57,7 @@ class MainWindow(QMainWindow):
         # Create a container widget for the material management tab
         self.material_tab = QWidget()
         layout = QVBoxLayout(self.material_tab)
+        layout.setContentsMargins(10, 10, 10, 10) # Margins for material tab
         
         # Button to switch between list and entry views
         self.toggle_view_btn = QPushButton("Add New Material")
@@ -70,6 +73,7 @@ class MainWindow(QMainWindow):
         
         # Connect signals
         self.materials_list.edit_requested.connect(self.edit_material)
+        self.materials_list.add_new_requested.connect(self.on_add_new_material_requested) # New connection
         self.material_entry.material_saved.connect(self.on_material_saved)
         
         # Add to layout
@@ -130,6 +134,7 @@ class MainWindow(QMainWindow):
         """Set up the reorder list tab."""
         self.reorder_tab = QWidget()
         layout = QVBoxLayout(self.reorder_tab)
+        layout.setContentsMargins(10, 10, 10, 10) # Margins for reorder tab
         
         # Create and add the reorder list widget
         self.reorder_widget = ReorderListWidget()
@@ -141,6 +146,7 @@ class MainWindow(QMainWindow):
         """Set up the check-in tab."""
         self.checkin_tab = QWidget()
         layout = QVBoxLayout(self.checkin_tab)
+        layout.setContentsMargins(10, 10, 10, 10) # Margins for checkin tab
         
         # Create and add the check-in widget
         self.checkin_widget = CheckInWidget()
@@ -153,6 +159,16 @@ class MainWindow(QMainWindow):
         # Refresh the materials and reorder list to show updated quantities
         self.materials_list.load_materials()
         self.reorder_widget.load_reorder_items()
+
+    @pyqtSlot()
+    def on_add_new_material_requested(self):
+        self.material_entry.clear_form() # This sets material_id to None
+        # If we are currently showing the materials list, toggle to the entry form
+        if not self.showing_entry_form:
+            self.toggle_material_view()
+        # If we are already showing the entry form, it's now cleared and ready.
+        # Ensure the tab itself is active if multiple main tabs exist
+        self.tabs.setCurrentWidget(self.material_tab)
 
     @pyqtSlot()
     def export_to_csv(self):
