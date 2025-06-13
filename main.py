@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         
         # Create and add the check-in widget
         self.checkin_widget = CheckInWidget()
-        self.checkin_widget.checkins_processed.connect(self.on_checkins_processed)
+        self.checkin_widget.data_changed.connect(self.on_checkins_processed)
         
         layout.addWidget(self.checkin_widget)
     

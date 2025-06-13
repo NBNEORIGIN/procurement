@@ -42,10 +42,10 @@ class MaterialsListWidget(QWidget):
         
         # Table setup
         self.table = QTableWidget()
-        self.table.setColumnCount(8)
+        self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels([
-            "ID", "Type", "Name", "Unit", "Current Qty", "Min Qty", 
-            "Supplier", "Actions"
+            "ID", "Type", "Name", "Unit", "Current Stock", "Min Stock",
+            "Supplier", "Order URL", "Actions"
         ])
         
         # Configure table properties
@@ -88,13 +88,18 @@ class MaterialsListWidget(QWidget):
                 self.table.insertRow(row)
                 
                 # Add data to columns
+                # Indices based on SELECT * and new table structure:
+                # id:0, type:1, name:2, unit:3, current_stock:4, min_stock:5,
+                # reorder_point:6, order_method:7, supplier:8, order_url:9,
+                # contact:10, notes:11, created_at:12, updated_at:13
                 self.table.setItem(row, 0, QTableWidgetItem(str(material[0])))  # ID
                 self.table.setItem(row, 1, QTableWidgetItem(material[1]))  # Type
                 self.table.setItem(row, 2, QTableWidgetItem(material[2]))  # Name
                 self.table.setItem(row, 3, QTableWidgetItem(material[3]))  # Unit
-                self.table.setItem(row, 4, QTableWidgetItem(str(material[4])))  # Current Qty
-                self.table.setItem(row, 5, QTableWidgetItem(str(material[5])))  # Min Qty
+                self.table.setItem(row, 4, QTableWidgetItem(str(material[4])))  # Current Stock
+                self.table.setItem(row, 5, QTableWidgetItem(str(material[5])))  # Min Stock
                 self.table.setItem(row, 6, QTableWidgetItem(material[8] or ""))  # Supplier
+                self.table.setItem(row, 7, QTableWidgetItem(material[9] or ""))  # Order URL
                 
                 # Add action buttons
                 btn_layout = QHBoxLayout()
@@ -113,7 +118,7 @@ class MaterialsListWidget(QWidget):
                 btn_layout.setContentsMargins(5, 1, 5, 1)
                 
                 btn_widget.setLayout(btn_layout)
-                self.table.setCellWidget(row, 7, btn_widget)
+                self.table.setCellWidget(row, 8, btn_widget) # Actions button in column 8
             
             # Resize columns to contents
             self.table.resizeColumnsToContents()
@@ -195,17 +200,21 @@ class MaterialsListWidget(QWidget):
             material = cursor.fetchone()
             
             if material:
+                # Indices based on SELECT * and new table structure:
+                # id:0, type:1, name:2, unit:3, current_stock:4, min_stock:5,
+                # reorder_point:6, order_method:7, supplier:8, order_url:9,
+                # contact:10, notes:11, created_at:12, updated_at:13
                 material_dict = {
                     'id': material[0],
                     'type': material[1],
                     'name': material[2],
                     'unit': material[3],
-                    'current_qty': material[4],
-                    'min_qty': material[5],
+                    'current_stock': material[4],
+                    'min_stock': material[5],
                     'reorder_point': material[6],
                     'order_method': material[7],
                     'supplier': material[8],
-                    'link': material[9],
+                    'order_url': material[9],
                     'contact': material[10],
                     'notes': material[11]
                 }

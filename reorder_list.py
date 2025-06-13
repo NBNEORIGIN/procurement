@@ -5,6 +5,10 @@ from PyQt6.QtCore import Qt, pyqtSignal, QDate
 from PyQt6.QtGui import QColor, QDoubleValidator
 
 from database import db
+from order_processing import create_order
+import logging
+
+logger = logging.getLogger('procurement.reorder_list')
 
 class ReorderListWidget(QWidget):
     """Widget for managing materials that need to be reordered."""
@@ -41,7 +45,7 @@ class ReorderListWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels([
-            "", "ID", "Type", "Name", "Current Qty", "Min Qty", 
+            "", "ID", "Type", "Name", "Current Stock", "Min Stock",
             "Reorder Point", "Supplier", "Order Qty"
         ])
         
@@ -88,9 +92,9 @@ class ReorderListWidget(QWidget):
             cursor = conn.cursor()
             
             cursor.execute('''
-                SELECT id, type, name, current_qty, min_qty, reorder_point, supplier
+                SELECT id, type, name, current_stock, min_stock, reorder_point, supplier
                 FROM materials
-                WHERE current_qty <= reorder_point
+                WHERE current_stock <= reorder_point
                 ORDER BY type, name
             ''')
             
@@ -118,23 +122,25 @@ class ReorderListWidget(QWidget):
                 self.table.setItem(row, 2, QTableWidgetItem(material[1]))  # Type
                 self.table.setItem(row, 3, QTableWidgetItem(material[2]))  # Name
                 
-                # Current Qty (highlight if below min)
-                current_qty_item = QTableWidgetItem(f"{material[3]:.2f}")
-                if material[3] < material[5]:  # current_qty < reorder_point
-                    current_qty_item.setForeground(QColor('red'))
-                self.table.setItem(row, 4, current_qty_item)
+                # Current Stock (highlight if below reorder_point)
+                # material[3] is current_stock, material[5] is reorder_point
+                current_stock_item = QTableWidgetItem(f"{material[3]:.2f}")
+                if material[3] <= material[5]: # current_stock <= reorder_point (though query already filters, this is for visual cue)
+                    current_stock_item.setForeground(QColor('red'))
+                self.table.setItem(row, 4, current_stock_item)
                 
-                # Min Qty
-                self.table.setItem(row, 5, QTableWidgetItem(f"{material[4]:.2f}"))
+                # Min Stock
+                self.table.setItem(row, 5, QTableWidgetItem(f"{material[4]:.2f}")) # material[4] is min_stock
                 
                 # Reorder Point
-                self.table.setItem(row, 6, QTableWidgetItem(f"{material[5]:.2f}"))
+                self.table.setItem(row, 6, QTableWidgetItem(f"{material[5]:.2f}")) # material[5] is reorder_point
                 
                 # Supplier
-                self.table.setItem(row, 7, QTableWidgetItem(material[6] or ""))
+                self.table.setItem(row, 7, QTableWidgetItem(material[6] or "")) # material[6] is supplier
                 
                 # Order Qty (editable)
-                order_qty = max(material[5] - material[3], 0)  # Default to reorder_point - current_qty
+                # Default to reorder_point - current_stock
+                order_qty = max(material[5] - material[3], 0)
                 order_qty_item = QLineEdit(f"{order_qty:.2f}")
                 order_qty_item.setValidator(QDoubleValidator(0, 999999, 2, self))
                 order_qty_item.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -176,30 +182,42 @@ class ReorderListWidget(QWidget):
                     order_qty_edit.setStyleSheet("background-color: #ffdddd;")
     
     def create_orders(self):
-        """Create purchase orders for selected items."""
+        """Create purchase orders for selected items using order_processing module."""
+        self.create_order_btn.setEnabled(False)
+        self.refresh_btn.setEnabled(False)
         try:
-            # Get current date
-            order_date = QDate.currentDate().toString("yyyy-MM-dd")
-            
             # Get selected items
             order_items = []
+            selected_rows_count = 0
             for row in range(self.table.rowCount()):
-                checkbox = self.table.cellWidget(row, 0).findChild(QCheckBox)
+                checkbox_widget = self.table.cellWidget(row, 0)
+                if not checkbox_widget:
+                    continue
+                checkbox = checkbox_widget.findChild(QCheckBox)
                 if checkbox and checkbox.isChecked():
-                    material_id = int(self.table.item(row, 1).text())
-                    order_qty_edit = self.table.cellWidget(row, 8)
+                    selected_rows_count +=1
+                    material_id_item = self.table.item(row, 1)
+                    order_qty_widget = self.table.cellWidget(row, 8)
                     
-                    try:
-                        quantity = float(order_qty_edit.text() or "0")
-                        if quantity > 0:
-                            order_items.append((material_id, quantity))
-                    except ValueError:
-                        continue
-            
+                    if material_id_item and order_qty_widget:
+                        try:
+                            material_id = int(material_id_item.text())
+                            quantity = float(order_qty_widget.text() or "0")
+                            if quantity > 0:
+                                order_items.append({'material_id': material_id, 'quantity': quantity, 'row': row})
+                            else:
+                                logger.warning(f"Skipping row {row} for order creation: quantity is zero or invalid.")
+                        except ValueError:
+                            logger.error(f"Invalid data in row {row} for order creation.", exc_info=True)
+                            continue
+                    else:
+                        logger.warning(f"Missing material_id_item or order_qty_widget in row {row}")
+
+
             if not order_items:
-                QMessageBox.warning(self, "No Valid Items", "No valid items selected for ordering.")
+                QMessageBox.warning(self, "No Valid Items", "No valid items selected or quantities specified for ordering.")
                 return
-            
+
             # Confirm before creating orders
             reply = QMessageBox.question(
                 self,
@@ -208,33 +226,46 @@ class ReorderListWidget(QWidget):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No
             )
-            
+
             if reply == QMessageBox.StandardButton.Yes:
-                conn = db.get_connection()
-                cursor = conn.cursor()
+                successful_orders = 0
+                failed_orders = 0
                 
-                for material_id, quantity in order_items:
-                    cursor.execute('''
-                        INSERT INTO orders (material_id, quantity_ordered, status, order_date)
-                        VALUES (?, ?, 'Pending', ?)
-                    ''', (material_id, quantity, order_date))
+                for item_data in order_items:
+                    material_id = item_data['material_id']
+                    quantity = item_data['quantity']
+                    row = item_data['row']
+
+                    new_order_id = create_order(material_id, quantity)
+                    if new_order_id:
+                        logger.info(f"Successfully created order for material ID {material_id}, quantity {quantity}. New Order ID: {new_order_id}")
+                        successful_orders += 1
+                    else:
+                        logger.error(f"Failed to create order for material ID {material_id}, quantity {quantity}. See previous logs for details.")
+                        failed_orders += 1
+                        # Optionally, provide visual feedback on the row that failed
+                        order_qty_widget = self.table.cellWidget(row, 8)
+                        if order_qty_widget:
+                            order_qty_widget.setStyleSheet("background-color: #ffdddd;")
+
+
+                summary_message = f"Successfully created {successful_orders} order(s)."
+                if failed_orders > 0:
+                    summary_message += f"\nFailed to create {failed_orders} order(s)."
                 
-                conn.commit()
-                
-                # Update status and refresh
-                self.status_label.setText(f"Created {len(order_items)} order(s) successfully.")
-                self.orders_created.emit()
-                
-                # Refresh the list
-                self.load_reorder_items()
-                
-                # Show success message
-                QMessageBox.information(
-                    self,
-                    "Orders Created",
-                    f"Successfully created {len(order_items)} order(s).",
-                    QMessageBox.StandardButton.Ok
-                )
-        
+                QMessageBox.information(self, "Order Creation Summary", summary_message)
+                self.status_label.setText(summary_message)
+
+                if successful_orders > 0:
+                    self.orders_created.emit()
+                    self.load_reorder_items() # Refresh the list
+            else:
+                logger.info("User cancelled order creation.")
+                self.status_label.setText("Order creation cancelled by user.")
+
         except Exception as e:
+            logger.error(f"An unexpected error occurred in create_orders: {e}", exc_info=True)
             QMessageBox.critical(self, "Error", f"Failed to create orders: {str(e)}")
+        finally:
+            self.update_order_button_state() # Re-evaluates create_order_btn state
+            self.refresh_btn.setEnabled(True)

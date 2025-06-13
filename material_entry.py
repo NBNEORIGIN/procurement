@@ -51,13 +51,13 @@ class MaterialEntryWidget(QWidget):
         self.unit_combo = QComboBox()
         self.unit_combo.addItems(["kg", "g", "L", "mL", "pcs", "m", "cm", "mm"])
         
-        self.current_qty = QDoubleSpinBox()
-        self.current_qty.setRange(0, 999999.99)
-        self.current_qty.setDecimals(2)
+        self.current_stock_spinbox = QDoubleSpinBox()
+        self.current_stock_spinbox.setRange(0, 999999.99)
+        self.current_stock_spinbox.setDecimals(2)
         
-        self.min_qty = QDoubleSpinBox()
-        self.min_qty.setRange(0, 999999.99)
-        self.min_qty.setDecimals(2)
+        self.min_stock_spinbox = QDoubleSpinBox()
+        self.min_stock_spinbox.setRange(0, 999999.99)
+        self.min_stock_spinbox.setDecimals(2)
         
         self.reorder_point = QDoubleSpinBox()
         self.reorder_point.setRange(0, 999999.99)
@@ -67,7 +67,7 @@ class MaterialEntryWidget(QWidget):
         self.order_method.addItems(["Email", "Phone", "Online", "In-Person"])
         
         self.supplier_edit = QLineEdit()
-        self.link_edit = QLineEdit()
+        self.order_url_edit = QLineEdit()
         self.contact_edit = QLineEdit()
         self.notes_edit = QLineEdit()
         
@@ -75,12 +75,12 @@ class MaterialEntryWidget(QWidget):
         form_layout.addRow("Type*:", self.type_edit)
         form_layout.addRow("Name*:", self.name_edit)
         form_layout.addRow("Unit*:", self.unit_combo)
-        form_layout.addRow("Current Quantity:", self.current_qty)
-        form_layout.addRow("Minimum Quantity:", self.min_qty)
+        form_layout.addRow("Current Stock:", self.current_stock_spinbox)
+        form_layout.addRow("Min Stock:", self.min_stock_spinbox)
         form_layout.addRow("Reorder Point:", self.reorder_point)
         form_layout.addRow("Order Method:", self.order_method)
         form_layout.addRow("Supplier:", self.supplier_edit)
-        form_layout.addRow("Product Link:", self.link_edit)
+        form_layout.addRow("Order URL:", self.order_url_edit)
         form_layout.addRow("Contact:", self.contact_edit)
         form_layout.addRow("Notes:", self.notes_edit)
         
@@ -124,8 +124,8 @@ class MaterialEntryWidget(QWidget):
             
         # Validate numeric fields
         try:
-            float(self.current_qty.value())
-            float(self.min_qty.value())
+            float(self.current_stock_spinbox.value())
+            float(self.min_stock_spinbox.value())
             float(self.reorder_point.value())
         except ValueError:
             errors.append("Quantity fields must be valid numbers.")
@@ -149,12 +149,12 @@ class MaterialEntryWidget(QWidget):
                 self.type_edit.text().strip(),
                 self.name_edit.text().strip(),
                 self.unit_combo.currentText(),
-                self.current_qty.value(),
-                self.min_qty.value(),
+                self.current_stock_spinbox.value(),
+                self.min_stock_spinbox.value(),
                 self.reorder_point.value(),
                 self.order_method.currentText(),
                 self.supplier_edit.text().strip(),
-                self.link_edit.text().strip(),
+                self.order_url_edit.text().strip(),
                 self.contact_edit.text().strip(),
                 self.notes_edit.text().strip()
             )
@@ -163,9 +163,9 @@ class MaterialEntryWidget(QWidget):
                 # Update existing material
                 cursor.execute('''
                     UPDATE materials SET
-                        type = ?, name = ?, unit = ?, current_qty = ?,
-                        min_qty = ?, reorder_point = ?, order_method = ?,
-                        supplier = ?, link = ?, contact = ?, notes = ?
+                        type = ?, name = ?, unit = ?, current_stock = ?,
+                        min_stock = ?, reorder_point = ?, order_method = ?,
+                        supplier = ?, order_url = ?, contact = ?, notes = ?
                     WHERE id = ?
                 ''', material_data + (self.material_id,))
                 action = "updated"
@@ -173,8 +173,8 @@ class MaterialEntryWidget(QWidget):
                 # Insert new material
                 cursor.execute('''
                     INSERT INTO materials (
-                        type, name, unit, current_qty, min_qty, reorder_point,
-                        order_method, supplier, link, contact, notes
+                        type, name, unit, current_stock, min_stock, reorder_point,
+                        order_method, supplier, order_url, contact, notes
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', material_data)
                 action = "saved"
@@ -194,13 +194,17 @@ class MaterialEntryWidget(QWidget):
     def clear_form(self):
         """Clear all form fields and reset to add mode."""
         self.material_id = None
-        for widget in self.findChildren((QLineEdit, QComboBox, QDoubleSpinBox)):
-            if isinstance(widget, QLineEdit):
-                widget.clear()
-            elif isinstance(widget, QComboBox):
-                widget.setCurrentIndex(0)
-            elif isinstance(widget, QDoubleSpinBox):
-                widget.setValue(0.0)
+        self.type_edit.clear()
+        self.name_edit.clear()
+        self.unit_combo.setCurrentIndex(0)
+        self.current_stock_spinbox.setValue(0.0)
+        self.min_stock_spinbox.setValue(0.0)
+        self.reorder_point.setValue(0.0)
+        self.order_method.setCurrentIndex(0)
+        self.supplier_edit.clear()
+        self.order_url_edit.clear()
+        self.contact_edit.clear()
+        self.notes_edit.clear()
         self.status_label.clear()
         
     def populate_form(self, material_data):
@@ -219,8 +223,8 @@ class MaterialEntryWidget(QWidget):
             self.unit_combo.setCurrentIndex(unit_index)
             
         # Set numeric fields
-        self.current_qty.setValue(float(material_data.get('current_qty', 0)))
-        self.min_qty.setValue(float(material_data.get('min_qty', 0)))
+        self.current_stock_spinbox.setValue(float(material_data.get('current_stock', 0)))
+        self.min_stock_spinbox.setValue(float(material_data.get('min_stock', 0)))
         self.reorder_point.setValue(float(material_data.get('reorder_point', 0)))
         
         # Set order method
@@ -230,6 +234,6 @@ class MaterialEntryWidget(QWidget):
             
         # Set remaining fields
         self.supplier_edit.setText(material_data.get('supplier', ''))
-        self.link_edit.setText(material_data.get('link', ''))
+        self.order_url_edit.setText(material_data.get('order_url', ''))
         self.contact_edit.setText(material_data.get('contact', ''))
         self.notes_edit.setText(material_data.get('notes', ''))
