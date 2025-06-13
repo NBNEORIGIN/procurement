@@ -1,6 +1,8 @@
 import sys
+import os
+import pandas as pd
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, 
-                            QVBoxLayout, QPushButton, QHBoxLayout, QLabel)
+                            QVBoxLayout, QPushButton, QHBoxLayout, QLabel, QMessageBox)
 from PyQt6.QtCore import Qt, pyqtSlot
 
 from database import db
@@ -33,6 +35,17 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.material_tab, "Material Management")
         self.tabs.addTab(self.reorder_tab, "Reorder List")
         self.tabs.addTab(self.checkin_tab, "Check-In")
+
+        # Export button
+        self.export_button = QPushButton("Export All Data to CSV")
+        self.export_button.clicked.connect(self.export_to_csv)
+
+        export_layout = QHBoxLayout()
+        export_layout.addStretch()
+        export_layout.addWidget(self.export_button)
+        export_layout.addStretch()
+
+        layout.addLayout(export_layout)
         
         # Status bar
         self.statusBar().showMessage("Ready")
@@ -139,7 +152,52 @@ class MainWindow(QMainWindow):
         """Handle check-ins processed signal."""
         # Refresh the materials and reorder list to show updated quantities
         self.materials_list.load_materials()
-        self.reorder_list.load_reorder_items()
+        self.reorder_widget.load_reorder_items()
+
+    @pyqtSlot()
+    def export_to_csv(self):
+        # import pandas as pd # Already imported at top level
+        # import os # Already imported at top level
+        # from PyQt6.QtWidgets import QMessageBox # Already imported at top level
+        # from database import db # db object is available globally
+
+        try:
+            conn = db.get_connection()
+
+            materials_df = pd.read_sql_query("SELECT * FROM materials", conn)
+            orders_df = pd.read_sql_query("SELECT * FROM orders", conn)
+            receipts_df = pd.read_sql_query("SELECT * FROM receipts", conn)
+
+            # It's good practice to close the connection if it's not managed by a context manager elsewhere
+            # However, db.get_connection() in this app returns a connection that might be reused.
+            # For read-only operations like this, if the connection is a class member and managed,
+            # explicit closing here might be premature. But if it's a fresh one, it should be closed.
+            # Assuming db.get_connection() provides a fresh connection or manages its lifecycle appropriately
+            # and it's safe to close after use if it was intended for this single operation.
+            # Let's assume for now that closing it is fine. If issues arise, this could be revisited.
+            if conn:
+                conn.close()
+
+            output_dir = os.path.dirname(db.db_path)
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir) # Ensure directory exists, though for db.db_path's dir it should.
+
+            materials_path = os.path.join(output_dir, "materials_export.csv")
+            orders_path = os.path.join(output_dir, "orders_export.csv")
+            receipts_path = os.path.join(output_dir, "receipts_export.csv")
+
+            materials_df.to_csv(materials_path, index=False)
+            orders_df.to_csv(orders_path, index=False)
+            receipts_df.to_csv(receipts_path, index=False)
+
+            QMessageBox.information(self, "Export Successful",
+                                    f"Data exported to:\n{materials_path}\n{orders_path}\n{receipts_path}")
+
+        except Exception as e:
+            # import logging # Assuming logger is part of the class or module
+            # logger.error(f"CSV Export failed: {e}", exc_info=True) # For now, direct critical message
+            QMessageBox.critical(self, "Export Failed", f"Failed to export data to CSV: {str(e)}")
+
 
 def main():
     app = QApplication(sys.argv)
