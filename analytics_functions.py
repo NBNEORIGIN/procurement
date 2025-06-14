@@ -166,5 +166,3 @@ if __name__ == '__main__':
             logger.info(f"Material ID: {mat_id}, Orders in last 90 days: {count_val}")
     else:
         logger.info("No recent order counts calculated or an error occurred.")
-
-```
